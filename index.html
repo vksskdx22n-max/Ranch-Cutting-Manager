@@ -1,0 +1,1887 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Ranch Cutting Manager v1.8</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,600;0,700;1,600&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:       #1a1108;
+  --bg2:      #221609;
+  --bg3:      #2c1e0e;
+  --bg4:      #381f0a;
+  --card:     #271a0a;
+  --border:   #4a3418;
+  --border2:  #5e4422;
+
+  --amber:    #e8b84a;
+  --amber2:   #f5d070;
+  --adim:     rgba(232,184,74,0.14);
+
+  --rust:     #c87830;
+  --rdim:     rgba(200,120,48,0.15);
+
+  --text:     #f2e6cc;
+  --text2:    #9a7a50;
+  --text3:    #5e4228;
+
+  --green-l:  #70b048;
+  --red-l:    #c05040;
+  --yellow-l: #c8a830;
+  --blue-l:   #4890c0;
+  --orange-l: #d47840;
+
+  --r:        10px;
+  --rsm:      6px;
+  --tr:       all 0.17s ease;
+
+  --sidebar-w: 300px;
+  --nav-h:     64px;
+  --hdr-h:     56px;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+html, body { height: 100%; }
+body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); font-size: 15px; line-height: 1.5; overflow-x: hidden; }
+
+/* ===================== LAYOUT ===================== */
+.shell { display: flex; min-height: 100vh; }
+
+/* SIDEBAR */
+.sidebar {
+  width: var(--sidebar-w);
+  background: var(--bg2);
+  border-right: 1px solid var(--border);
+  display: flex; flex-direction: column;
+  position: fixed; top: 0; left: 0; bottom: 0;
+  z-index: 50; overflow-y: auto;
+}
+.sidebar-logo {
+  padding: 28px 22px 22px;
+  border-bottom: 1px solid var(--border);
+}
+.sidebar-logo .app-name {
+  font-family: 'Playfair Display', serif;
+  font-size: 1.5rem; font-weight: 700;
+  color: var(--amber); line-height: 1.2;
+}
+.sidebar-logo .app-ver {
+  font-size: 0.72rem; color: var(--text3); margin-top: 4px;
+}
+.sidebar-nav { padding: 14px 12px; flex: 1; }
+.snav-item {
+  display: flex; align-items: center; gap: 12px;
+  padding: 14px 16px; border-radius: var(--rsm);
+  cursor: pointer; color: var(--text2);
+  font-size: 1rem; font-weight: 400;
+  transition: var(--tr); margin-bottom: 3px;
+  border: none; background: none; width: 100%; text-align: left;
+}
+.snav-item:hover { background: var(--bg3); color: var(--text); }
+.snav-item.active { background: var(--adim); color: var(--amber); font-weight: 500; }
+.snav-item .sico { font-size: 1.25rem; width: 24px; text-align: center; flex-shrink: 0; }
+.sidebar-bottom {
+  padding: 16px 22px;
+  border-top: 1px solid var(--border);
+  display: flex; flex-direction: column; gap: 8px;
+}
+.sidebar-bottom .btn { font-size: 0.82rem; }
+
+/* MAIN */
+.main {
+  margin-left: var(--sidebar-w);
+  flex: 1;
+  min-height: 100vh;
+  display: flex; flex-direction: column;
+}
+.main-content { padding: 36px 48px 60px; flex: 1; }
+
+/* MOBILE */
+@media (max-width: 767px) {
+  .sidebar { display: none; }
+  .main { margin-left: 0; }
+  .main-content { padding: 16px 16px calc(var(--nav-h) + 16px); }
+  .mobile-header { display: flex !important; }
+  .fab { bottom: calc(var(--nav-h) + 12px); right: 14px; }
+}
+@media (min-width: 768px) {
+  .mobile-header { display: none; }
+  .bottom-nav { display: none !important; }
+}
+
+/* MOBILE HEADER */
+.mobile-header {
+  background: var(--bg2); border-bottom: 1px solid var(--border);
+  height: var(--hdr-h); padding: 0 16px;
+  display: none; align-items: center; justify-content: space-between;
+  position: sticky; top: 0; z-index: 100;
+}
+.mob-logo { font-family: 'Playfair Display', serif; font-size: 1rem; color: var(--amber); }
+.mob-ver  { font-size: 0.62rem; color: var(--text3); margin-top: 2px; }
+
+/* BOTTOM NAV */
+.bottom-nav {
+  position: fixed; bottom: 0; left: 0; right: 0;
+  height: var(--nav-h); background: var(--bg2);
+  border-top: 1px solid var(--border);
+  display: flex; z-index: 100;
+  padding-bottom: env(safe-area-inset-bottom, 0);
+}
+.nav-btn {
+  flex: 1; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: 3px;
+  border: none; background: none; cursor: pointer; transition: var(--tr);
+}
+.nav-btn .ni { font-size: 1.25rem; line-height: 1; }
+.nav-btn .nl { font-size: 0.58rem; color: var(--text3); letter-spacing: 0.02em; }
+.nav-btn.active .nl { color: var(--amber); }
+.nav-btn.active .ni { filter: drop-shadow(0 0 5px rgba(232,184,74,0.45)); }
+
+/* DRAWER */
+.drawer-bg { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 110; }
+.drawer-bg.open { display: block; }
+.drawer {
+  position: fixed; bottom: var(--nav-h); left: 0; right: 0;
+  background: var(--bg2); border-top: 1px solid var(--border);
+  border-radius: 16px 16px 0 0; padding: 12px 16px;
+  z-index: 111; display: none;
+}
+.drawer.open { display: block; animation: sup 0.2s ease; }
+@keyframes sup { from { transform: translateY(16px); opacity:0; } to { transform: translateY(0); opacity:1; } }
+.draw-item {
+  display: flex; align-items: center; gap: 12px;
+  padding: 13px 8px; border-bottom: 1px solid var(--border);
+  cursor: pointer; border-radius: var(--rsm); transition: var(--tr);
+  font-size: 0.92rem; color: var(--text2);
+}
+.draw-item:last-child { border-bottom: none; }
+.draw-item:active { background: var(--bg3); }
+
+/* FAB */
+.fab {
+  position: fixed; bottom: 28px; right: 28px;
+  width: 52px; height: 52px;
+  background: var(--amber); color: var(--bg);
+  border-radius: 50%; border: none; font-size: 1.6rem;
+  cursor: pointer; z-index: 99;
+  box-shadow: 0 4px 20px rgba(232,184,74,0.38);
+  display: flex; align-items: center; justify-content: center;
+  transition: var(--tr);
+}
+.fab:active { transform: scale(0.92); }
+
+/* ===================== PANELS ===================== */
+.panel { display: none; }
+.panel.active { display: block; animation: fup 0.18s ease; }
+@keyframes fup { from { opacity:0; transform:translateY(5px); } to { opacity:1; transform:translateY(0); } }
+
+/* ===================== TYPOGRAPHY ===================== */
+.sec-title {
+  font-family: 'Playfair Display', serif;
+  font-size: 2.6rem; font-weight: 700; color: var(--amber);
+  margin-bottom: 6px; line-height: 1.15;
+  display: flex; align-items: center; gap: 12px;
+}
+.sec-title .ico { font-size: 2rem; }
+.sec-divider {
+  height: 2px; background: linear-gradient(90deg, var(--border2), transparent);
+  margin-bottom: 24px; border-radius: 1px;
+}
+.sub-head {
+  font-size: 0.7rem; color: var(--text3);
+  text-transform: uppercase; letter-spacing: 0.09em; margin-bottom: 10px;
+}
+
+/* ===================== CARDS ===================== */
+.card {
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: var(--r); padding: 16px 18px; margin-bottom: 12px;
+  transition: var(--tr);
+}
+.card.click { cursor: pointer; }
+.card.click:hover { border-color: var(--border2); }
+.card.click:active { transform: scale(0.993); }
+
+/* ===================== BADGES ===================== */
+.badge {
+  display: inline-flex; align-items: center;
+  padding: 3px 10px; border-radius: 20px;
+  font-size: 0.68rem; font-weight: 500; letter-spacing: 0.03em; white-space: nowrap;
+}
+.bg { background: rgba(74,140,58,0.18); color: var(--green-l); border: 1px solid rgba(74,140,58,0.28); }
+.br { background: rgba(192,80,64,0.18); color: var(--red-l);   border: 1px solid rgba(192,80,64,0.28); }
+.by { background: rgba(200,168,48,0.18);color: var(--yellow-l);border: 1px solid rgba(200,168,48,0.28);}
+.bb { background: rgba(72,144,192,0.18);color: var(--blue-l);  border: 1px solid rgba(72,144,192,0.28);}
+.bk { background: rgba(94,66,40,0.2);  color: var(--text2);   border: 1px solid var(--border); }
+.ba { background: var(--adim);          color: var(--amber);   border: 1px solid rgba(232,184,74,0.28); }
+
+/* ===================== FORM ===================== */
+.fg  { margin-bottom: 15px; }
+.fl  { display: block; font-size: 0.72rem; color: var(--text2); margin-bottom: 5px; text-transform: uppercase; letter-spacing: 0.05em; }
+.req { color: var(--amber); margin-left: 2px; }
+.fc  {
+  width: 100%; background: var(--bg3); border: 1px solid var(--border);
+  border-radius: var(--rsm); color: var(--text);
+  font-family: 'DM Sans', sans-serif; font-size: 0.93rem;
+  padding: 10px 13px; transition: var(--tr);
+  -webkit-appearance: none; appearance: none;
+}
+.fc:focus { outline: none; border-color: var(--amber); box-shadow: 0 0 0 3px var(--adim); }
+.fc::placeholder { color: var(--text3); }
+select.fc { cursor: pointer; }
+textarea.fc { resize: vertical; min-height: 78px; }
+.fr2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.fr3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+@media (max-width: 400px) { .fr2,.fr3 { grid-template-columns: 1fr; } }
+
+/* chips */
+.chip-g { display: flex; flex-wrap: wrap; gap: 7px; }
+.chip {
+  padding: 6px 14px; border-radius: 20px;
+  border: 1px solid var(--border); background: var(--bg3);
+  color: var(--text2); font-size: 0.8rem; cursor: pointer; transition: var(--tr);
+}
+.chip.on { background: var(--adim); border-color: var(--amber); color: var(--amber); }
+.chip:active { transform: scale(0.96); }
+
+/* stars */
+.star-g { display: flex; gap: 6px; }
+.star { font-size: 1.5rem; cursor: pointer; opacity: 0.22; transition: var(--tr); color: var(--amber); }
+.star.on { opacity: 1; }
+
+/* ===================== BUTTONS ===================== */
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  padding: 10px 20px; border-radius: var(--rsm);
+  font-family: 'DM Sans', sans-serif; font-size: 0.88rem; font-weight: 500;
+  cursor: pointer; transition: var(--tr); border: none;
+}
+.btn:active { transform: scale(0.97); }
+.bp  { background: var(--amber); color: var(--bg); }
+.bp:hover { background: var(--amber2); }
+.bo  { background: transparent; border: 1px solid var(--border); color: var(--text2); }
+.bo:hover { border-color: var(--amber); color: var(--amber); }
+.bd  { background: rgba(192,80,64,0.25); color: var(--red-l); border: 1px solid rgba(192,80,64,0.3); }
+.bsm { padding: 6px 13px; font-size: 0.8rem; }
+.bfw { width: 100%; }
+.act-row { display: flex; gap: 8px; margin-top: 16px; flex-wrap: wrap; }
+
+/* ===================== SEARCH / FILTER ===================== */
+.sbar {
+  display: flex; align-items: center; gap: 9px;
+  background: var(--bg3); border: 1px solid var(--border);
+  border-radius: var(--rsm); padding: 9px 14px; margin-bottom: 16px;
+}
+.sbar input { background: none; border: none; color: var(--text); font-family: 'DM Sans',sans-serif; font-size: 0.92rem; flex: 1; }
+.sbar input:focus { outline: none; }
+.fbar { display: flex; gap: 7px; overflow-x: auto; padding-bottom: 2px; margin-bottom: 16px; scrollbar-width: none; }
+.fbar::-webkit-scrollbar { display: none; }
+.fchip {
+  padding: 6px 14px; border-radius: 20px;
+  border: 1px solid var(--border); background: var(--bg3);
+  color: var(--text2); font-size: 0.78rem; white-space: nowrap;
+  cursor: pointer; transition: var(--tr); flex-shrink: 0;
+}
+.fchip.on { background: var(--adim); border-color: var(--amber); color: var(--amber); }
+
+/* ===================== HORSE LIST ===================== */
+.hitem {
+  display: flex; align-items: center; gap: 14px;
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: var(--r); padding: 14px 16px;
+  margin-bottom: 11px; cursor: pointer; transition: var(--tr);
+}
+.hitem:hover { border-color: var(--border2); }
+.hitem:active { transform: scale(0.987); }
+.hav {
+  width: 52px; height: 52px; border-radius: 50%;
+  background: var(--bg3); border: 2px solid var(--border);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.5rem; overflow: hidden; flex-shrink: 0;
+}
+.hav img { width: 100%; height: 100%; object-fit: cover; }
+.hinf { flex: 1; min-width: 0; }
+.hname { font-weight: 600; font-size: 1rem; color: var(--text); }
+.hsub  { font-size: 0.78rem; color: var(--text2); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.hchev { color: var(--text3); font-size: 1.1rem; }
+
+/* ===================== DETAIL ===================== */
+.back {
+  display: inline-flex; align-items: center; gap: 7px;
+  background: none; border: none; color: var(--text2);
+  font-family: 'DM Sans',sans-serif; font-size: 0.88rem;
+  cursor: pointer; padding: 0; margin-bottom: 20px; transition: var(--tr);
+}
+.back:hover { color: var(--amber); }
+.dhdr { display: flex; align-items: center; gap: 16px; margin-bottom: 22px; }
+.dav  {
+  width: 70px; height: 70px; border-radius: 50%;
+  background: var(--bg3); border: 2px solid var(--amber);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 2.2rem; overflow: hidden; flex-shrink: 0;
+}
+.dav img { width: 100%; height: 100%; object-fit: cover; }
+.dname { font-family: 'Playfair Display',serif; font-size: 1.4rem; font-weight: 700; color: var(--text); line-height: 1.2; }
+.dsub  { font-size: 0.82rem; color: var(--text2); margin-top: 3px; }
+.dsec  { margin-bottom: 22px; }
+.dsth  { font-size: 0.68rem; color: var(--text3); text-transform: uppercase; letter-spacing: 0.09em; margin-bottom: 10px; padding-bottom: 6px; border-bottom: 1px solid var(--border); }
+.drow  { display: flex; justify-content: space-between; align-items: flex-start; padding: 5px 0; font-size: 0.87rem; }
+.dlbl  { color: var(--text2); flex-shrink: 0; margin-right: 16px; }
+.dval  { color: var(--text); text-align: right; word-break: break-word; }
+.dval a { color: var(--amber); text-decoration: none; }
+
+/* earnings */
+.erow  { display: flex; justify-content: space-between; align-items: center; background: var(--bg3); border-radius: var(--rsm); padding: 10px 14px; margin-bottom: 6px; }
+.elbl  { font-size: 0.82rem; color: var(--text2); }
+.eval  { font-size: 0.97rem; font-weight: 600; color: var(--amber); }
+.etot  { background: var(--adim); border: 1px solid rgba(232,184,74,0.22); }
+.etot .elbl { color: var(--amber); font-weight: 600; }
+
+/* ===================== SESSION ITEM ===================== */
+.sitem { background: var(--card); border: 1px solid var(--border); border-radius: var(--r); padding: 13px 16px; margin-bottom: 11px; cursor: pointer; transition: var(--tr); }
+.sitem:hover { border-color: var(--border2); }
+.sitem:active { transform: scale(0.987); }
+.shdr { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 5px; }
+.shorse { font-weight: 600; font-size: 0.95rem; }
+.sdate  { font-size: 0.77rem; color: var(--text2); }
+.schips { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px; }
+.schip  { background: var(--bg3); border: 1px solid var(--border); border-radius: 10px; padding: 2px 9px; font-size: 0.7rem; color: var(--text2); }
+.sstars { color: var(--amber); font-size: 0.82rem; margin-top: 5px; }
+
+/* ===================== PROGRESS ===================== */
+.pbg { height: 5px; background: var(--bg3); border-radius: 3px; overflow: hidden; margin-top: 8px; }
+.pfl { height: 100%; border-radius: 3px; background: var(--rust); transition: width 0.4s; }
+.pfl.g { background: var(--green-l); } .pfl.y { background: var(--yellow-l); } .pfl.r { background: var(--red-l); }
+
+/* ===================== ALERTS ===================== */
+.alert { border-radius: var(--rsm); padding: 10px 13px; font-size: 0.83rem; margin-bottom: 10px; display: flex; align-items: flex-start; gap: 8px; line-height: 1.4; }
+.ay { background: rgba(200,168,48,0.13); border: 1px solid rgba(200,168,48,0.28); color: var(--yellow-l); }
+.ar { background: rgba(192,80,64,0.13);  border: 1px solid rgba(192,80,64,0.28);  color: var(--red-l); }
+.ag { background: rgba(112,176,72,0.13); border: 1px solid rgba(112,176,72,0.28); color: var(--green-l); }
+
+/* ===================== CALENDAR ===================== */
+.cal-nav { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
+.cal-month { font-family: 'Playfair Display',serif; font-size: 1.15rem; font-weight: 600; color: var(--text); }
+.cal-grid { display: grid; grid-template-columns: repeat(7,1fr); gap: 2px; }
+.cdh  { text-align: center; font-size: 0.63rem; color: var(--text3); padding: 4px 0; text-transform: uppercase; }
+.cday { aspect-ratio:1; display:flex; flex-direction:column; align-items:center; justify-content:flex-start; padding:3px 1px; border-radius:6px; cursor:pointer; transition: var(--tr); }
+.cday:active { background: var(--bg3); }
+.cday.tod { background: var(--adim); }
+.cday.tod .cdn { color: var(--amber); font-weight: 600; }
+.cday.oth .cdn { color: var(--text3); }
+.cdn  { font-size: 0.78rem; }
+.cdots { display: flex; gap: 2px; flex-wrap: wrap; justify-content: center; margin-top: 2px; }
+.cdot { width: 5px; height: 5px; border-radius: 50%; }
+.dg { background: var(--green-l); } .dr { background: var(--red-l); } .db { background: var(--blue-l); } .do2 { background: var(--orange-l); }
+
+/* ===================== KPI ===================== */
+.kgrid { display: grid; grid-template-columns: repeat(4,1fr); gap: 12px; margin-bottom: 18px; }
+@media (max-width: 900px) { .kgrid { grid-template-columns: 1fr 1fr; } }
+.kcard { background: var(--card); border: 1px solid var(--border); border-radius: var(--r); padding: 18px 14px; text-align: center; }
+.kval  { font-family: 'Playfair Display',serif; font-size: 2rem; color: var(--amber); line-height: 1; }
+.klbl  { font-size: 0.7rem; color: var(--text2); margin-top: 5px; }
+
+/* mini chart */
+.mchart { display: flex; align-items: flex-end; gap: 3px; height: 38px; }
+.mbar { flex: 1; border-radius: 2px 2px 0 0; background: var(--border2); min-height: 4px; }
+.mbar.hi { background: var(--amber); }
+
+/* progressione */
+.pcard { background: var(--card); border: 1px solid var(--border); border-radius: var(--r); padding: 14px 16px; margin-bottom: 10px; }
+.phdr  { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+.pname { font-weight: 600; font-size: 0.92rem; }
+.pidx  { font-family: 'Playfair Display',serif; font-size: 1.05rem; }
+.up { color: var(--green-l); } .dn { color: var(--red-l); } .st { color: var(--yellow-l); }
+
+/* ===================== OVERLAY SHEET ===================== */
+.ov { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.68); z-index: 200; backdrop-filter: blur(3px); align-items: flex-end; justify-content: center; }
+.ov.open { display: flex; }
+.sheet {
+  background: var(--bg2); border-radius: 20px 20px 0 0;
+  border-top: 1px solid var(--border);
+  width: 100%; max-width: 640px;
+  max-height: 92vh; overflow-y: auto;
+  padding: 0 20px 40px;
+  animation: sup 0.27s ease;
+}
+.shandle { width: 38px; height: 4px; background: var(--border2); border-radius: 2px; margin: 13px auto 18px; }
+.stitle {
+  font-family: 'Playfair Display',serif; font-size: 1.15rem; font-weight: 700; color: var(--amber);
+  margin-bottom: 22px; display: flex; align-items: center; justify-content: space-between;
+}
+.sclose { background: none; border: none; color: var(--text3); font-size: 1.2rem; cursor: pointer; padding: 4px; }
+.divider { height: 1px; background: var(--border); margin: 16px 0; }
+
+/* photo */
+.phup { width:100%; background:var(--bg3); border:2px dashed var(--border); border-radius:var(--r); padding:18px; text-align:center; cursor:pointer; transition:var(--tr); color:var(--text3); font-size:0.85rem; }
+.phup:active { border-color:var(--amber); color:var(--amber); }
+.phprev { width:100%; height:155px; object-fit:cover; border-radius:var(--r); display:none; margin-bottom:6px; }
+
+/* score block */
+.sblk { text-align:center; }
+.sblk-lbl { font-size:0.62rem; color:var(--text3); text-transform:uppercase; letter-spacing:.06em; }
+.sblk-val { font-family:'Playfair Display',serif; font-size:1.4rem; color:var(--amber); line-height:1.1; }
+
+/* empty */
+.empty { text-align:center; padding:50px 20px; color:var(--text3); }
+.eico  { font-size:3rem; margin-bottom:12px; }
+.etxt  { font-size:0.9rem; line-height:1.55; }
+
+
+/* ===== COVER SCREEN ===== */
+#cover {
+  position:fixed; inset:0; z-index:999;
+  background:var(--bg);
+  display:flex; align-items:center; justify-content:center;
+  overflow-y:auto; padding:32px 20px;
+}
+.cover-inner {
+  width:100%; max-width:520px;
+  display:flex; flex-direction:column; align-items:center;
+  text-align:center;
+}
+.cover-horse { font-size:3.8rem; margin-bottom:14px; animation:float 3s ease-in-out infinite; }
+@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}
+.cover-title {
+  font-family:'Playfair Display',serif;
+  font-size:2.8rem; font-weight:700; color:var(--amber);
+  line-height:1.1; margin-bottom:8px;
+}
+.cover-line { width:60px; height:2px; background:linear-gradient(90deg,transparent,var(--amber),transparent); margin:12px auto 16px; }
+.cover-desc { font-size:0.92rem; color:var(--text2); line-height:1.65; margin-bottom:26px; max-width:400px; }
+.cover-grid {
+  display:grid; grid-template-columns:1fr 1fr; gap:8px;
+  width:100%; margin-bottom:26px;
+}
+.cover-card {
+  background:var(--bg2); border:1px solid var(--border);
+  border-radius:var(--r); padding:11px 13px;
+  display:flex; gap:9px; align-items:flex-start; text-align:left;
+}
+.cover-card .cci { font-size:1.1rem; flex-shrink:0; }
+.cover-card .ccn { font-size:0.8rem; font-weight:600; color:var(--text); margin-bottom:2px; }
+.cover-card .ccd { font-size:0.7rem; color:var(--text2); line-height:1.35; }
+.cover-pw {
+  width:100%; background:var(--bg2);
+  border:1px solid var(--border); border-radius:var(--r);
+  padding:18px 20px; margin-bottom:12px;
+}
+.cover-pw-lbl { font-size:0.68rem; color:var(--text3); text-transform:uppercase; letter-spacing:0.08em; margin-bottom:10px; }
+.cover-pw-row { display:flex; gap:8px; }
+.cover-pw-input {
+  flex:1; background:var(--bg3); border:1px solid var(--border);
+  border-radius:var(--rsm); color:var(--text);
+  font-family:'DM Sans',sans-serif; font-size:1rem;
+  padding:11px 14px; -webkit-appearance:none;
+}
+.cover-pw-input:focus { outline:none; border-color:var(--amber); box-shadow:0 0 0 3px var(--adim); }
+.cover-pw-input::placeholder { color:var(--text3); }
+.cover-pw-err { color:var(--red-l); font-size:0.8rem; margin-top:7px; min-height:18px; }
+.cover-ver { font-size:0.65rem; color:var(--text3); margin-top:6px; letter-spacing:0.04em; }
+
+/* ===== GUIDA PANEL ===== */
+#panel-guida.active { display:block; }
+
+/* ===== MOBILE FORM FIX ===== */
+@media (max-width:520px) { .fr2,.fr3 { grid-template-columns:1fr; } }
+
+/* scrollbar */
+::-webkit-scrollbar { width: 5px; } ::-webkit-scrollbar-track { background: var(--bg2); } ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+</style>
+</head>
+<body>
+
+<div id="cover">
+  <div class="cover-inner">
+    <div class="cover-horse">🐴</div>
+    <div class="cover-title">Ranch Cutting<br>Manager</div>
+    <div class="cover-line"></div>
+    <div class="cover-desc">
+      L'app italiana per la gestione completa del ranch da <strong style="color:var(--text)">cutting horse</strong>.<br>
+      Allenamenti, gare, bovini e statistiche avanzate — tutto in un unico strumento.
+    </div>
+    <div class="cover-grid">
+      <div class="cover-card"><span class="cci">🐴</span><div><div class="ccn">Anagrafica Cavalli</div><div class="ccd">Genealogia, foto, stato, earnings</div></div></div>
+      <div class="cover-card"><span class="cci">📋</span><div><div class="ccn">Diario Allenamento</div><div class="ccd">Sessioni, tipo lavoro, valutazioni</div></div></div>
+      <div class="cover-card"><span class="cci">🏆</span><div><div class="ccn">Gare e Risultati</div><div class="ccd">Go 1+2, finale, prize money</div></div></div>
+      <div class="cover-card"><span class="cci">🐄</span><div><div class="ccn">Gestione Bovini</div><div class="ccd">Mandrie, usura, alert automatici</div></div></div>
+      <div class="cover-card"><span class="cci">📊</span><div><div class="ccn">Dashboard KPI</div><div class="ccd">Statistiche e insights automatici</div></div></div>
+      <div class="cover-card"><span class="cci">🏥</span><div><div class="ccn">Salute & Calendario</div><div class="ccd">Vet, ferratura, scadenze</div></div></div>
+    </div>
+    <div class="cover-pw">
+      <div class="cover-pw-lbl">Accesso riservato</div>
+      <div class="cover-pw-row">
+        <input class="cover-pw-input" type="password" id="pw-in" placeholder="Inserisci la password…" onkeydown="if(event.key==='Enter')doPw()">
+        <button class="btn bp" onclick="doPw()">Entra →</button>
+      </div>
+      <div class="cover-pw-err" id="pw-err"></div>
+    </div>
+    <div class="cover-ver">v1.8 — Tutti i dati restano sul tuo dispositivo</div>
+  </div>
+</div>
+
+<div class="shell" id="app-shell" style="display:none">
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <div class="app-name">🐴 Ranch Cutting<br>Manager</div>
+      <div class="app-ver">v1.8</div>
+    </div>
+    <nav class="sidebar-nav">
+      <button class="snav-item active" onclick="goPanel('guida',this)"><span class="sico">❓</span> Guida all'uso</button>
+      <button class="snav-item" onclick="goPanel('cavalli',this)"><span class="sico">🐴</span> Anagrafica Cavalli</button>
+      <button class="snav-item" onclick="goPanel('diario',this)"><span class="sico">📋</span> Diario Allenamento</button>
+      <button class="snav-item" onclick="goPanel('gare',this)"><span class="sico">🏆</span> Gare e Risultati</button>
+      <button class="snav-item" onclick="goPanel('bovini',this)"><span class="sico">🐄</span> Gestione Bovini</button>
+      <button class="snav-item" onclick="goPanel('calendario',this)"><span class="sico">📅</span> Calendario</button>
+      <button class="snav-item" onclick="goPanel('salute',this)"><span class="sico">🏥</span> Salute & Manutenzione</button>
+      <button class="snav-item" onclick="goPanel('dashboard',this)"><span class="sico">📊</span> Dashboard KPI</button>
+    </nav>
+    <div class="sidebar-bottom">
+      <button class="btn bo bsm" onclick="exportData()">💾 Esporta backup</button>
+      <button class="btn bo bsm" onclick="importTrigger()">📂 Importa backup</button>
+      <input type="file" id="import-file" accept=".json" style="display:none" onchange="importData(this)">
+    </div>
+  </aside>
+
+  <!-- MAIN -->
+  <div class="main">
+    <header class="mobile-header">
+      <div><div class="mob-logo">🐴 Ranch Cutting Manager</div><div class="mob-ver">v1.8</div></div>
+      <button class="btn bo bsm" onclick="exportData()">💾</button>
+    </header>
+
+    <div class="main-content">
+
+      <!-- P0: GUIDA -->
+      <div id="panel-guida" class="panel active">
+        <div class="sec-title"><span class="ico">❓</span> Guida all'uso</div>
+        <div class="sec-divider"></div>
+
+        <div class="card" style="margin-bottom:16px">
+          <div class="sub-head" style="margin-bottom:14px">🚀 Come iniziare</div>
+          <div style="display:flex;flex-direction:column;gap:14px">
+            <div style="display:flex;gap:13px;align-items:flex-start">
+              <div style="width:28px;height:28px;border-radius:50%;background:var(--amber);color:var(--bg);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:.85rem;flex-shrink:0">1</div>
+              <div><div style="font-weight:600;font-size:.9rem;margin-bottom:3px">Aggiungi i tuoi cavalli</div><div style="font-size:.82rem;color:var(--text2);line-height:1.5">Vai su <strong style="color:var(--amber)">Anagrafica Cavalli</strong> e premi <strong style="color:var(--amber)">+</strong>. Inserisci nome, sesso e stato. Il resto è opzionale.</div></div>
+            </div>
+            <div style="display:flex;gap:13px;align-items:flex-start">
+              <div style="width:28px;height:28px;border-radius:50%;background:var(--amber);color:var(--bg);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:.85rem;flex-shrink:0">2</div>
+              <div><div style="font-weight:600;font-size:.9rem;margin-bottom:3px">Aggiungi i bovini</div><div style="font-size:.82rem;color:var(--text2);line-height:1.5">Vai su <strong style="color:var(--amber)">Gestione Bovini</strong> e premi <strong style="color:var(--amber)">+</strong>. Inserisci nome, tipo e data ingresso. L'app conta i giorni e ti avvisa quando è ora di cambiarli.</div></div>
+            </div>
+            <div style="display:flex;gap:13px;align-items:flex-start">
+              <div style="width:28px;height:28px;border-radius:50%;background:var(--amber);color:var(--bg);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:.85rem;flex-shrink:0">3</div>
+              <div><div style="font-weight:600;font-size:.9rem;margin-bottom:3px">Registra le sessioni</div><div style="font-size:.82rem;color:var(--text2);line-height:1.5">Vai su <strong style="color:var(--amber)">Diario Allenamento</strong> e premi <strong style="color:var(--amber)">+</strong>. Puoi farlo la sera o il giorno dopo — data e ora si inseriscono liberamente.</div></div>
+            </div>
+            <div style="display:flex;gap:13px;align-items:flex-start">
+              <div style="width:28px;height:28px;border-radius:50%;background:var(--amber);color:var(--bg);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:.85rem;flex-shrink:0">4</div>
+              <div><div style="font-weight:600;font-size:.9rem;margin-bottom:3px">Guarda le statistiche</div><div style="font-size:.82rem;color:var(--text2);line-height:1.5">Dopo 5-6 sessioni vai su <strong style="color:var(--amber)">Dashboard KPI</strong>: troverai grafici, trend e consigli automatici basati sui tuoi dati.</div></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card" style="margin-bottom:16px">
+          <div class="sub-head" style="margin-bottom:14px">📱 I pannelli</div>
+          <div style="display:flex;flex-direction:column;gap:0">
+            <div style="display:flex;gap:12px;padding:10px 0;border-bottom:1px solid var(--border)"><span style="font-size:1.2rem;flex-shrink:0">🐴</span><div><div style="font-weight:600;font-size:.87rem">Anagrafica Cavalli</div><div style="font-size:.79rem;color:var(--text2);line-height:1.45;margin-top:2px">Scheda per ogni cavallo: nome, genealogia (padre e madre), foto, stato, montepremi. Tap su un cavallo per i dettagli e il suo diario.</div></div></div>
+            <div style="display:flex;gap:12px;padding:10px 0;border-bottom:1px solid var(--border)"><span style="font-size:1.2rem;flex-shrink:0">📋</span><div><div style="font-weight:600;font-size:.87rem">Diario Allenamento</div><div style="font-size:.79rem;color:var(--text2);line-height:1.45;margin-top:2px">Registra ogni sessione con cavallo, trainer, tipo di lavoro, valutazione da 1 a 5 stelle, condizione fisica e umore. Il trainer viene ricordato automaticamente.</div></div></div>
+            <div style="display:flex;gap:12px;padding:10px 0;border-bottom:1px solid var(--border)"><span style="font-size:1.2rem;flex-shrink:0">🏆</span><div><div style="font-weight:600;font-size:.87rem">Gare e Risultati</div><div style="font-size:.79rem;color:var(--text2);line-height:1.45;margin-top:2px">Crea una scheda per ogni gara, poi aggiungi le Run con punteggi Go 1 e Go 2. Per Futurity/Derby puoi registrare anche la Finale separata.</div></div></div>
+            <div style="display:flex;gap:12px;padding:10px 0;border-bottom:1px solid var(--border)"><span style="font-size:1.2rem;flex-shrink:0">🐄</span><div><div style="font-weight:600;font-size:.87rem">Gestione Bovini</div><div style="font-size:.79rem;color:var(--text2);line-height:1.45;margin-top:2px">Vitelli, Zebù, Bisonti o Bufali — individuali o in mandria. Barra di usura automatica: giallo a 50 giorni, rosso a 60. Puoi segnalare fermi sanitari.</div></div></div>
+            <div style="display:flex;gap:12px;padding:10px 0;border-bottom:1px solid var(--border)"><span style="font-size:1.2rem;flex-shrink:0">📅</span><div><div style="font-weight:600;font-size:.87rem">Calendario</div><div style="font-size:.79rem;color:var(--text2);line-height:1.45;margin-top:2px">Vista mensile con pallini colorati: verde=sessione, rosso=gara, blu=salute. Tap su un giorno per vedere tutti gli eventi.</div></div></div>
+            <div style="display:flex;gap:12px;padding:10px 0;border-bottom:1px solid var(--border)"><span style="font-size:1.2rem;flex-shrink:0">🏥</span><div><div style="font-weight:600;font-size:.87rem">Salute & Manutenzione</div><div style="font-size:.79rem;color:var(--text2);line-height:1.45;margin-top:2px">Visite, vaccinazioni, ferratura per cavalli e bovini. Inserisci una prossima scadenza e l'app ti avvisa 30 giorni prima.</div></div></div>
+            <div style="display:flex;gap:12px;padding:10px 0"><span style="font-size:1.2rem;flex-shrink:0">📊</span><div><div style="font-weight:600;font-size:.87rem">Dashboard KPI</div><div style="font-size:.79rem;color:var(--text2);line-height:1.45;margin-top:2px">Statistiche complete: progressione cavalli, orario migliore, affinità trainer-cavallo, impatto usura bovini, indice gara e insights automatici scritti in italiano.</div></div></div>
+          </div>
+        </div>
+
+        <div class="card" style="margin-bottom:16px">
+          <div class="sub-head" style="margin-bottom:12px">💡 Consigli pratici</div>
+          <div class="alert ay" style="margin-bottom:8px">📱 <div>Se usi iPhone: <strong>Impostazioni → Fotocamera → Formato → Massima compatibilità</strong> per avere foto in JPEG invece di HEIC.</div></div>
+          <div class="alert ag" style="margin-bottom:8px">💾 <div>Fai un <strong>Esporta backup</strong> dalla sidebar almeno una volta a settimana per non perdere i dati.</div></div>
+          <div class="alert ay" style="margin-bottom:8px">⭐ <div>Più campi compili per ogni sessione (condizione, umore, orario), più le statistiche della Dashboard saranno precise.</div></div>
+          <div class="alert ag">🐄 <div>Quando usi un bovino in allenamento, selezionalo nel form sessione — così l'app calcola l'impatto dell'usura sulla qualità.</div></div>
+        </div>
+
+        <div class="card" style="margin-bottom:16px">
+          <div class="sub-head" style="margin-bottom:12px">❓ Domande frequenti</div>
+          <div style="display:flex;flex-direction:column;gap:0">
+            <div style="padding:12px 0;border-bottom:1px solid var(--border)"><div style="font-weight:600;font-size:.87rem;color:var(--amber);margin-bottom:4px">I dati si perdono se chiudo il browser?</div><div style="font-size:.8rem;color:var(--text2);line-height:1.5">No. I dati sono salvati sul dispositivo in modo permanente. Si perderebbero solo cancellando la cronologia del browser. Fai sempre backup regolare.</div></div>
+            <div style="padding:12px 0;border-bottom:1px solid var(--border)"><div style="font-weight:600;font-size:.87rem;color:var(--amber);margin-bottom:4px">Posso usarla sul telefono?</div><div style="font-size:.8rem;color:var(--text2);line-height:1.5">Sì. Su mobile trovi la navigazione in basso. Il bottone "Altro" dà accesso a Calendario, Salute e questa Guida.</div></div>
+            <div style="padding:12px 0;border-bottom:1px solid var(--border)"><div style="font-weight:600;font-size:.87rem;color:var(--amber);margin-bottom:4px">Quando appaiono le statistiche?</div><div style="font-size:.8rem;color:var(--text2);line-height:1.5">Con meno di 3 sessioni vedrai solo i contatori. Con 10+ sessioni appariranno tutti i grafici e gli insights automatici.</div></div>
+            <div style="padding:12px 0"><div style="font-weight:600;font-size:.87rem;color:var(--amber);margin-bottom:4px">Posso condividere l'app?</div><div style="font-size:.8rem;color:var(--text2);line-height:1.5">Sì. Condividi il file HTML via WhatsApp, email o AirDrop. Chi lo riceve lo apre nel browser e inserisce la password. Ogni dispositivo ha i propri dati separati.</div></div>
+          </div>
+        </div>
+
+        <div style="text-align:center;font-size:.7rem;color:var(--text3);padding:4px 0 20px">Ranch Cutting Manager v1.8 — Sviluppato con passione per il cutting horse italiano</div>
+      </div>
+
+      <!-- P1: ANAGRAFICA CAVALLI -->
+      <div id="panel-cavalli" class="panel">
+        <div id="vw-lcav">
+          <div class="sec-title"><span class="ico">🐴</span> Anagrafica Cavalli</div>
+          <div class="sec-divider"></div>
+          <div class="sbar"><span style="color:var(--text3)">🔍</span><input id="srcav" placeholder="Cerca cavallo…" oninput="renderCav()"></div>
+          <div class="fbar">
+            <div class="fchip on" onclick="fCav(this,'tutti')">Tutti</div>
+            <div class="fchip" onclick="fCav(this,'attivo')">Attivi</div>
+            <div class="fchip" onclick="fCav(this,'gara')">In Gara</div>
+            <div class="fchip" onclick="fCav(this,'riposo')">Riposo</div>
+            <div class="fchip" onclick="fCav(this,'ritirato')">Ritirati</div>
+          </div>
+          <div id="cav-list"></div>
+        </div>
+        <div id="vw-dcav" style="display:none"></div>
+      </div>
+
+      <!-- P2: DIARIO -->
+      <div id="panel-diario" class="panel">
+        <div id="vw-lsess">
+          <div class="sec-title"><span class="ico">📋</span> Diario Allenamento</div>
+          <div class="sec-divider"></div>
+          <div class="fbar" id="fb-sess">
+            <div class="fchip on" onclick="fSess(this,'tutti')">Tutte</div>
+            <div class="fchip" onclick="fSess(this,'cow')">Cow Work</div>
+            <div class="fchip" onclick="fSess(this,'dry')">Dry Work</div>
+            <div class="fchip" onclick="fSess(this,'flag')">Flag Work</div>
+            <div class="fchip" onclick="fSess(this,'fence')">Fence Work</div>
+            <div class="fchip" onclick="fSess(this,'herd')">Herd Work</div>
+          </div>
+          <div id="sess-list"></div>
+        </div>
+        <div id="vw-dsess" style="display:none"></div>
+      </div>
+
+      <!-- P3: GARE -->
+      <div id="panel-gare" class="panel">
+        <div id="vw-lgare">
+          <div class="sec-title"><span class="ico">🏆</span> Gare e Risultati</div>
+          <div class="sec-divider"></div>
+          <div id="gare-list"></div>
+        </div>
+        <div id="vw-dgara" style="display:none"></div>
+      </div>
+
+      <!-- P4: BOVINI -->
+      <div id="panel-bovini" class="panel">
+        <div id="vw-lbov">
+          <div class="sec-title"><span class="ico">🐄</span> Gestione Bovini</div>
+          <div class="sec-divider"></div>
+          <div id="bov-alerts"></div>
+          <div id="bov-list"></div>
+        </div>
+        <div id="vw-dbov" style="display:none"></div>
+      </div>
+
+      <!-- P5: CALENDARIO -->
+      <div id="panel-calendario" class="panel">
+        <div class="sec-title"><span class="ico">📅</span> Calendario</div>
+        <div class="sec-divider"></div>
+        <div class="cal-nav">
+          <button class="btn bo bsm" onclick="calPrev()">‹ Prec</button>
+          <div class="cal-month" id="cal-lbl"></div>
+          <button class="btn bo bsm" onclick="calNext()">Succ ›</button>
+        </div>
+        <div class="cal-grid" id="cal-hdr" style="margin-bottom:4px"></div>
+        <div class="cal-grid" id="cal-body" style="margin-bottom:20px"></div>
+        <div class="sub-head">Prossimi eventi</div>
+        <div id="cal-evs"></div>
+      </div>
+
+      <!-- P6: SALUTE -->
+      <div id="panel-salute" class="panel">
+        <div id="vw-lsal">
+          <div class="sec-title"><span class="ico">🏥</span> Salute & Manutenzione</div>
+          <div class="sec-divider"></div>
+          <div id="sal-alerts"></div>
+          <div class="fbar" id="fb-sal">
+            <div class="fchip on" onclick="fSal(this,'tutti')">Tutti</div>
+            <div class="fchip" onclick="fSal(this,'visita')">Visite</div>
+            <div class="fchip" onclick="fSal(this,'vaccinazione')">Vaccinazioni</div>
+            <div class="fchip" onclick="fSal(this,'ferratura')">Ferratura</div>
+            <div class="fchip" onclick="fSal(this,'trattamento')">Trattamenti</div>
+          </div>
+          <div id="sal-list"></div>
+        </div>
+      </div>
+
+      <!-- P7: DASHBOARD -->
+      <div id="panel-dashboard" class="panel">
+        <div class="sec-title"><span class="ico">📊</span> Dashboard KPI</div>
+        <div class="sec-divider"></div>
+        <div id="dash-content"></div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+
+<!-- FAB -->
+<button class="fab" onclick="fabAct()">+</button>
+
+<!-- BOTTOM NAV -->
+<nav class="bottom-nav">
+  <button class="nav-btn active" onclick="goPanel('guida',this)"><span class="ni">❓</span><span class="nl">Guida</span></button>
+  <button class="nav-btn" onclick="goPanel('cavalli',this)"><span class="ni">🐴</span><span class="nl">Cavalli</span></button>
+  <button class="nav-btn" onclick="goPanel('diario',this)"><span class="ni">📋</span><span class="nl">Diario</span></button>
+  <button class="nav-btn" onclick="goPanel('gare',this)"><span class="ni">🏆</span><span class="nl">Gare</span></button>
+  <button class="nav-btn" onclick="goPanel('bovini',this)"><span class="ni">🐄</span><span class="nl">Bovini</span></button>
+  <button class="nav-btn" onclick="toggleDrawer()"><span class="ni">☰</span><span class="nl">Altro</span></button>
+</nav>
+
+<!-- DRAWER -->
+<div class="drawer-bg" id="dbg" onclick="closeDrawer()"></div>
+<div class="drawer" id="drw">
+  <div class="draw-item" onclick="goPanel('dashboard',null);closeDrawer()"><span class="ni">📊</span> Dashboard KPI</div>
+  <div class="draw-item" onclick="goPanel('calendario',null);closeDrawer()"><span class="ni">📅</span> Calendario</div>
+  <div class="draw-item" onclick="goPanel('salute',null);closeDrawer()"><span class="ni">🏥</span> Salute & Manutenzione</div>
+  <div class="draw-item" onclick="exportData();closeDrawer()"><span class="ni">💾</span> Esporta backup</div>
+  <div class="draw-item" onclick="importTrigger();closeDrawer()"><span class="ni">📂</span> Importa backup</div>
+</div>
+
+<!-- OVERLAY -->
+<div class="ov" id="ov" onclick="closeOv(event)">
+  <div class="sheet" id="sheet"><div class="shandle"></div><div id="sc"></div></div>
+</div>
+
+<script>
+/* ===== DB ===== */
+const DB = {
+  g: k => { try { return JSON.parse(localStorage.getItem('rcm_'+k)||'[]'); } catch(e){ return []; } },
+  s: (k,v) => localStorage.setItem('rcm_'+k, JSON.stringify(v)),
+  id: () => Date.now().toString(36)+Math.random().toString(36).substr(2,5)
+};
+
+/* ===== STATE ===== */
+let curP='cavalli', fCavSt='tutti', fSessSt='tutti', fSalSt='tutti', sessCavId=null, calDt=new Date(), curGaraId=null;
+
+/* ===== TRAINER MEMORY ===== */
+function getTrainers() { return DB.g('trainers'); }
+function saveTrainer(nome) {
+  if(!nome) return;
+  const ts=DB.g('trainers');
+  if(!ts.includes(nome)) { ts.unshift(nome); DB.s('trainers',ts); }
+}
+function trainersDatalist() {
+  return `<datalist id="dl-train">${getTrainers().map(t=>`<option value="${t}">`).join('')}</datalist>`;
+}
+
+/* ===== NAV ===== */
+function goPanel(p, el) {
+  document.querySelectorAll('.panel').forEach(x=>x.classList.remove('active'));
+  document.querySelectorAll('.snav-item,.nav-btn').forEach(x=>x.classList.remove('active'));
+  const tp=document.getElementById('panel-'+p);
+  if(tp) tp.classList.add('active');
+  if(el) el.classList.add('active');
+  curP=p;
+  if(p!=='guida'&&p!=='dashboard'&&p!=='calendario') resetVws(p);
+  renderP(p);
+}
+function resetVws(p) {
+  const pan=document.getElementById('panel-'+p); if(!pan) return;
+  pan.querySelectorAll('[id^="vw-"]').forEach(v=>v.style.display='none');
+  const first=pan.querySelector('[id^="vw-l"]');
+  if(first) first.style.display='block';
+}
+function showVw(id) {
+  const pan=document.getElementById('panel-'+curP); if(!pan) return;
+  pan.querySelectorAll('[id^="vw-"]').forEach(v=>v.style.display='none');
+  const t=document.getElementById(id); if(t) t.style.display='block';
+}
+function renderP(p) {
+  const m={cavalli:renderCav,diario:renderSess,gare:renderGare,bovini:renderBov,calendario:renderCal,salute:renderSal,dashboard:renderDash,guida:()=>{}};
+  if(m[p]) m[p]();
+}
+function fabAct() {
+  const m={cavalli:formCav,diario:formSess,gare:formGara,bovini:formBov,salute:formSal,calendario:formEv};
+  if(m[curP]) m[curP]();
+}
+function toggleDrawer(){document.getElementById('drw').classList.toggle('open');document.getElementById('dbg').classList.toggle('open');}
+function closeDrawer(){document.getElementById('drw').classList.remove('open');document.getElementById('dbg').classList.remove('open');}
+function openOv(html){document.getElementById('sc').innerHTML=html;document.getElementById('ov').classList.add('open');document.body.style.overflow='hidden';}
+function closeOv(e){if(!e||e.target===document.getElementById('ov')){document.getElementById('ov').classList.remove('open');document.body.style.overflow='';}}
+function closeSheet(){closeOv();}
+
+/* ===== HELPERS ===== */
+function fd(d){if(!d)return'—';const dt=new Date(d);return isNaN(dt)?d:dt.toLocaleDateString('it-IT',{day:'2-digit',month:'2-digit',year:'numeric'});}
+function fc(v){if(!v&&v!==0)return'—';return'$ '+Number(v).toLocaleString('it-IT',{minimumFractionDigits:2,maximumFractionDigits:2});}
+function stars(n){let s='';for(let i=1;i<=5;i++)s+=i<=n?'★':'☆';return s;}
+function days(d){return Math.floor((Date.now()-new Date(d))/864e5);}
+function sbadge(s){const m={attivo:'bg',gara:'br',riposo:'by',ritirato:'bk',venduto:'bk',disponibile:'bg',rotazione:'bb',esaurito:'bk',fermo:'br'};return m[s]||'bk';}
+function slabel(s){const m={attivo:'Attivo',gara:'In Gara',riposo:'Riposo',ritirato:'Ritirato',venduto:'Venduto',disponibile:'Disponibile',rotazione:'In Rotazione',esaurito:'Esaurito',fermo:'Fermo San.'};return m[s]||s;}
+function tlvl(t){const m={cow:'Cow Work',herd:'Herd Work',fence:'Fence Work',dry:'Dry Work',flag:'Flag Work / Bandiera'};return m[t]||t;}
+function dr(l,v){if(!v)return'';return`<div class="drow"><span class="dlbl">${l}</span><span class="dval">${v}</span></div>`;}
+function dur(i,f){if(!i||!f)return'';const[ih,im]=i.split(':').map(Number),[fh,fm]=f.split(':').map(Number);let m=(fh*60+fm)-(ih*60+im);if(m<0)m+=1440;if(m<=0)return'';return m<60?m+'min':Math.floor(m/60)+'h'+(m%60?m%60+'min':'');}
+
+/* ===== P1: CAVALLI ===== */
+function renderCav() {
+  const cavs=DB.g('cavalli'), q=(document.getElementById('srcav')||{}).value||'';
+  const list=document.getElementById('cav-list'); if(!list) return;
+  const fil=cavs.filter(c=>(fCavSt==='tutti'||c.stato===fCavSt)&&(!q||c.nome_barn.toLowerCase().includes(q.toLowerCase())));
+  if(!fil.length){list.innerHTML=`<div class="empty"><div class="eico">🐴</div><div class="etxt">Nessun cavallo trovato.<br>Premi + per aggiungerne uno.</div></div>`;return;}
+  list.innerHTML=fil.map(c=>`
+    <div class="hitem" onclick="detCav('${c.id}')">
+      <div class="hav">${c.foto?`<img src="${c.foto}">`:'🐴'}</div>
+      <div class="hinf"><div class="hname">${c.nome_barn}</div><div class="hsub">${[c.nome_ncha,c.sesso].filter(Boolean).join(' · ')}</div></div>
+      <span class="badge ${sbadge(c.stato)}">${slabel(c.stato)}</span>
+      <span class="hchev">›</span>
+    </div>`).join('');
+}
+function fCav(el,f){fCavSt=f;document.querySelectorAll('#panel-cavalli .fbar .fchip').forEach(c=>c.classList.remove('on'));el.classList.add('on');renderCav();}
+function detCav(id) {
+  const c=DB.g('cavalli').find(x=>x.id===id); if(!c) return;
+  const sess=DB.g('sessioni').filter(s=>s.cavallo_id===id);
+  let eA=0; DB.g('gare').forEach(g=>(g.run||[]).forEach(r=>{if(r.cavallo_id===id)eA+=Number(r.prize_money||0);}));
+  const eP=Number(c.earnings_pre||0),eT=eP+eA;
+  // Layout: due colonne su desktop (dati sinistra, foto destra stile Oxbow)
+  const fotoCol=c.foto?`
+    <div style="flex-shrink:0;width:260px;align-self:flex-start;position:sticky;top:20px">
+      <img src="${c.foto}" style="width:100%;height:280px;object-fit:cover;border-radius:12px;border:2px solid var(--border2)">
+      <div style="margin-top:10px;text-align:center">
+        <div style="font-family:'Playfair Display',serif;font-size:1.2rem;color:var(--amber)">${c.nome_barn}</div>
+        ${c.nome_ncha?`<div style="font-size:.78rem;color:var(--text2);margin-top:2px">${c.nome_ncha}</div>`:''}
+        <div style="margin-top:6px"><span class="badge ${sbadge(c.stato)}">${slabel(c.stato)}</span></div>
+        <div style="font-size:.72rem;color:var(--text3);margin-top:8px">${sess.length} sessioni registrate</div>
+      </div>
+    </div>`:`
+    <div style="flex-shrink:0;width:220px;display:flex;flex-direction:column;align-items:center;gap:8px">
+      <div style="width:120px;height:120px;border-radius:50%;background:var(--bg3);border:2px solid var(--amber);display:flex;align-items:center;justify-content:center;font-size:3rem">🐴</div>
+      <div style="text-align:center">
+        <div style="font-family:'Playfair Display',serif;font-size:1.15rem;color:var(--amber)">${c.nome_barn}</div>
+        <div style="margin-top:5px"><span class="badge ${sbadge(c.stato)}">${slabel(c.stato)}</span></div>
+        <div style="font-size:.72rem;color:var(--text3);margin-top:6px">${sess.length} sessioni</div>
+      </div>
+    </div>`;
+  document.getElementById('vw-dcav').innerHTML=`
+    <button class="back" onclick="showVw('vw-lcav');renderCav()">← Tutti i cavalli</button>
+    <div style="display:flex;gap:32px;align-items:flex-start;flex-wrap:wrap">
+      <div style="flex:1;min-width:280px">
+        <div class="dsec"><div class="dsth">Identità</div>
+          ${dr('Sesso',c.sesso)}${dr('Nato il',fd(c.data_nascita))}${dr('Mantello',c.mantello)}${dr('Altezza',c.altezza?c.altezza+' cm':'')}${dr('Microchip',c.microchip)}
+        </div>
+        <div class="dsec"><div class="dsth">Genealogia</div>
+          ${dr('Padre (Sire)',c.sire)}${dr('Madre (Dam)',c.dam)}
+          ${c.link_pedigree?`<div class="drow"><span class="dlbl">Pedigree</span><span class="dval"><a href="${c.link_pedigree}" target="_blank">🔗 Apri link</a></span></div>`:''}
+        </div>
+        <div class="dsec"><div class="dsth">Montepremi</div>
+          <div class="erow"><span class="elbl">Pre-ingresso ranch</span><span class="eval">${fc(eP)}</span></div>
+          <div class="erow"><span class="elbl">Maturati in app</span><span class="eval">${fc(eA)}</span></div>
+          <div class="erow etot"><span class="elbl">Lifetime Earnings</span><span class="eval">${fc(eT)}</span></div>
+        </div>
+        ${c.note?`<div class="dsec"><div class="dsth">Note</div><div style="font-size:.87rem;color:var(--text2);line-height:1.55">${c.note}</div></div>`:''}
+        <div class="act-row">
+          <button class="btn bo bsm" onclick="formCav('${c.id}')">✏️ Modifica</button>
+          <button class="btn bo bsm" onclick="showDiarioCav('${c.id}')">📋 Diario</button>
+          <button class="btn bd bsm" onclick="delCav('${c.id}')">🗑️ Elimina</button>
+        </div>
+      </div>
+      ${fotoCol}
+    </div>`;
+  showVw('vw-dcav');
+}
+function showDiarioCav(id){sessCavId=id;goPanel('diario',document.querySelectorAll('.nav-btn')[1]);setTimeout(()=>renderSess(id),30);}
+function formCav(editId) {
+  const c=editId?DB.g('cavalli').find(x=>x.id===editId):{};
+  openOv(`
+    <div class="stitle">${editId?'✏️ Modifica Cavallo':'🐴 Nuovo Cavallo'}<button class="sclose" onclick="closeSheet()">✕</button></div>
+    <div class="fg">
+      <label class="fl">Foto <span style="font-size:.68rem;color:var(--text3);text-transform:none;letter-spacing:0">(JPEG o PNG — se usi iPhone condividi come JPEG)</span></label>
+      <input type="file" id="fc-fi" accept="image/jpeg,image/png,image/webp" style="display:none" onchange="prevFoto(this)">
+      <img id="fc-pv" class="phprev" src="${c.foto||''}" style="${c.foto?'display:block':''}">
+      <div class="phup" id="fc-ph" onclick="document.getElementById('fc-fi').click()" ${c.foto?'style="display:none"':''}>📷 Aggiungi foto (fotocamera o galleria)</div>
+      ${c.foto?`<button class="btn bo bsm" style="margin-top:6px" onclick="rmFoto()">Rimuovi foto</button>`:''}
+    </div>
+    <div class="fg"><label class="fl">Nome Barn <span class="req">*</span></label><input class="fc" id="fc-nome" value="${c.nome_barn||''}" placeholder="Es. Lucky"></div>
+    <div class="fg"><label class="fl">Nome Registro NCHA</label><input class="fc" id="fc-ncha" value="${c.nome_ncha||''}" placeholder="Nome ufficiale gara"></div>
+    <div class="fr2">
+      <div class="fg"><label class="fl">Sesso</label>
+        <select class="fc" id="fc-ses"><option value="">—</option>${['Stallone','Castrone','Giumenta'].map(v=>`<option value="${v}" ${c.sesso===v?'selected':''}>${v}</option>`).join('')}</select></div>
+      <div class="fg"><label class="fl">Stato <span class="req">*</span></label>
+        <select class="fc" id="fc-sta">${['attivo','gara','riposo','ritirato','venduto'].map(v=>`<option value="${v}" ${(c.stato||'attivo')===v?'selected':''}>${slabel(v)}</option>`).join('')}</select></div>
+    </div>
+    <div class="fr2">
+      <div class="fg"><label class="fl">Data di nascita</label><input type="date" class="fc" id="fc-nasc" value="${c.data_nascita||''}"></div>
+      <div class="fg"><label class="fl">Altezza (cm)</label><input type="number" class="fc" id="fc-alt" value="${c.altezza||''}" placeholder="155"></div>
+    </div>
+    <div class="fr2">
+      <div class="fg"><label class="fl">Mantello</label><input class="fc" id="fc-mant" value="${c.mantello||''}" placeholder="Es. Baio"></div>
+      <div class="fg"><label class="fl">Microchip</label><input class="fc" id="fc-chip" value="${c.microchip||''}" placeholder="Codice"></div>
+    </div>
+    <div class="divider"></div><div class="sub-head">Genealogia</div>
+    <div class="fr2">
+      <div class="fg"><label class="fl">Padre (Sire)</label><input class="fc" id="fc-sire" value="${c.sire||''}" placeholder="Nome padre"></div>
+      <div class="fg"><label class="fl">Madre (Dam)</label><input class="fc" id="fc-dam" value="${c.dam||''}" placeholder="Nome madre"></div>
+    </div>
+    <div class="fg"><label class="fl">Link Pedigree</label><input type="url" class="fc" id="fc-ped" value="${c.link_pedigree||''}" placeholder="https://…"></div>
+    <div class="divider"></div><div class="sub-head">Montepremi</div>
+    <div class="fg"><label class="fl">Earnings pre-ingresso ranch ($)</label><input type="number" class="fc" id="fc-earn" value="${c.earnings_pre||''}" placeholder="0.00" step="0.01"></div>
+    <div class="fg"><label class="fl">Note</label><textarea class="fc" id="fc-note" placeholder="Carattere, punti di forza, limiti…">${c.note||''}</textarea></div>
+    <button class="btn bp bfw" onclick="saveCav('${editId||''}')">💾 Salva</button>
+  `);
+}
+function prevFoto(input){
+  const file=input.files[0];if(!file)return;
+  const reader=new FileReader();
+  reader.onload=e=>{const img=new Image();img.onload=()=>{
+    const c=document.createElement('canvas'),MAX=500;let w=img.width,h=img.height;
+    if(w>h){if(w>MAX){h=h*(MAX/w);w=MAX;}}else{if(h>MAX){w=w*(MAX/h);h=MAX;}}
+    c.width=w;c.height=h;c.getContext('2d').drawImage(img,0,0,w,h);
+    const d=c.toDataURL('image/jpeg',0.75);
+    const pv=document.getElementById('fc-pv'),ph=document.getElementById('fc-ph');
+    if(pv){pv.src=d;pv.style.display='block';}if(ph)ph.style.display='none';
+  };img.src=e.target.result;};reader.readAsDataURL(file);
+}
+function rmFoto(){const pv=document.getElementById('fc-pv'),ph=document.getElementById('fc-ph');if(pv){pv.src='';pv.style.display='none';}if(ph)ph.style.display='';}
+function saveCav(editId){
+  const nome=document.getElementById('fc-nome').value.trim();if(!nome){alert('Inserisci il nome');return;}
+  const pv=document.getElementById('fc-pv');
+  const foto=(pv&&pv.style.display!=='none'&&pv.src&&pv.src!==location.href)?pv.src:'';
+  const cavs=DB.g('cavalli');
+  const d={id:editId||DB.id(),nome_barn:nome,nome_ncha:document.getElementById('fc-ncha').value.trim(),
+    sesso:document.getElementById('fc-ses').value,stato:document.getElementById('fc-sta').value,
+    data_nascita:document.getElementById('fc-nasc').value,altezza:document.getElementById('fc-alt').value,
+    mantello:document.getElementById('fc-mant').value.trim(),microchip:document.getElementById('fc-chip').value.trim(),
+    sire:document.getElementById('fc-sire').value.trim(),dam:document.getElementById('fc-dam').value.trim(),
+    link_pedigree:document.getElementById('fc-ped').value.trim(),earnings_pre:document.getElementById('fc-earn').value,
+    note:document.getElementById('fc-note').value.trim(),foto};
+  if(editId){const i=cavs.findIndex(x=>x.id===editId);if(i>-1)cavs[i]=d;}else cavs.push(d);
+  DB.s('cavalli',cavs);closeSheet();showVw('vw-lcav');renderCav();
+}
+function delCav(id){if(!confirm('Eliminare questo cavallo?'))return;DB.s('cavalli',DB.g('cavalli').filter(x=>x.id!==id));showVw('vw-lcav');renderCav();}
+
+/* ===== P2: DIARIO ===== */
+function renderSess(cavId){
+  if(cavId!==undefined) sessCavId=cavId;
+  const sess=DB.g('sessioni'),cavs=DB.g('cavalli');
+  const list=document.getElementById('sess-list');if(!list)return;
+  let fil=sess.filter(s=>(fSessSt==='tutti'||(s.tipi_lavoro||[]).includes(fSessSt))&&(!sessCavId||s.cavallo_id===sessCavId));
+  fil.sort((a,b)=>new Date(b.data)-new Date(a.data));
+  if(!fil.length){list.innerHTML=`<div class="empty"><div class="eico">📋</div><div class="etxt">Nessuna sessione.<br>Premi + per aggiungerne una.</div></div>`;return;}
+  list.innerHTML=fil.map(s=>{
+    const c=cavs.find(x=>x.id===s.cavallo_id),d2=dur(s.ora_inizio,s.ora_fine);
+    return `<div class="sitem" onclick="detSess('${s.id}')">
+      <div class="shdr"><span class="shorse">${c?c.nome_barn:'—'}</span><span class="sdate">${fd(s.data)}${d2?' · '+d2:''}</span></div>
+      <div style="font-size:.8rem;color:var(--text2)">${s.trainer||''}</div>
+      <div class="schips">${(s.tipi_lavoro||[]).map(t=>`<span class="schip">${tlvl(t)}</span>`).join('')}</div>
+      <div class="sstars">${stars(s.qualita||0)}</div>
+    </div>`;}).join('');
+}
+function fSess(el,f){fSessSt=f;document.querySelectorAll('#fb-sess .fchip').forEach(c=>c.classList.remove('on'));el.classList.add('on');renderSess();}
+function detSess(id){
+  const s=DB.g('sessioni').find(x=>x.id===id);if(!s)return;
+  const c=DB.g('cavalli').find(x=>x.id===s.cavallo_id),d2=dur(s.ora_inizio,s.ora_fine);
+  document.getElementById('vw-dsess').innerHTML=`
+    <button class="back" onclick="showVw('vw-lsess');renderSess()">← Tutte le sessioni</button>
+    <div class="dname" style="margin-bottom:3px">${c?c.nome_barn:'—'}</div>
+    <div style="color:var(--text2);font-size:.87rem;margin-bottom:18px">${fd(s.data)}</div>
+    <div class="dsec"><div class="dsth">Sessione</div>
+      ${dr('Trainer',s.trainer)}${dr('Orario',s.ora_inizio&&s.ora_fine?s.ora_inizio+' → '+s.ora_fine+(d2?' ('+d2+')':''):'')}
+      ${dr('Bovino',s.bovino?(DB.g('bovini').find(b=>b.id===s.bovino)||{}).nome||'':'')}</div>
+    <div class="dsec"><div class="dsth">Tipo di lavoro</div>
+      <div class="chip-g">${(s.tipi_lavoro||[]).map(t=>`<span class="chip on">${tlvl(t)}</span>`).join('')}</div></div>
+    <div class="dsec"><div class="dsth">Valutazione</div>
+      ${dr('Qualità','<span style="color:var(--amber)">'+stars(s.qualita||0)+'</span>')}
+      ${dr('Condizione fisica',s.condizione)}${dr('Umore',s.umore)}</div>
+    ${s.obiettivo?`<div class="dsec"><div class="dsth">Obiettivo</div>${dr('Obiettivo',s.obiettivo)}${dr('Raggiunto',s.obiettivo_raggiunto)}</div>`:''}
+    ${s.note?`<div class="dsec"><div class="dsth">Note</div><div style="font-size:.87rem;color:var(--text2);line-height:1.55">${s.note}</div></div>`:''}
+    <div class="act-row">
+      <button class="btn bo bsm" onclick="formSess('${s.id}')">✏️ Modifica</button>
+      <button class="btn bd bsm" onclick="delSess('${s.id}')">🗑️ Elimina</button>
+    </div>`;
+  showVw('vw-dsess');
+}
+function formSess(editId){
+  const s=editId?DB.g('sessioni').find(x=>x.id===editId):{};
+  const cavs=DB.g('cavalli'),bovs=DB.g('bovini');
+  const tipi=['cow','herd','fence','dry','flag'],sel=s.tipi_lavoro||[];
+  openOv(`
+    <div class="stitle">${editId?'✏️ Modifica':'📋 Nuova Sessione'}<button class="sclose" onclick="closeSheet()">✕</button></div>
+    ${trainersDatalist()}
+    <div class="fg"><label class="fl">Cavallo <span class="req">*</span></label>
+      <select class="fc" id="fs-cav"><option value="">Seleziona…</option>${cavs.map(c=>`<option value="${c.id}" ${s.cavallo_id===c.id?'selected':''}>${c.nome_barn}</option>`).join('')}</select></div>
+    <div class="fg"><label class="fl">Trainer / Rider</label>
+      <input class="fc" id="fs-tr" list="dl-train" value="${s.trainer||''}" placeholder="Nome trainer" autocomplete="off"></div>
+    <div class="fg"><label class="fl">Data <span class="req">*</span></label><input type="date" class="fc" id="fs-dt" value="${s.data||''}"></div>
+    <div class="fr2">
+      <div class="fg"><label class="fl">Ora inizio</label><input type="time" class="fc" id="fs-ini" value="${s.ora_inizio||''}"></div>
+      <div class="fg"><label class="fl">Ora fine</label><input type="time" class="fc" id="fs-fin" value="${s.ora_fine||''}"></div>
+    </div>
+    <div class="fg"><label class="fl">Tipo di lavoro</label>
+      <div class="chip-g" id="fs-tipi">${tipi.map(t=>`<div class="chip ${sel.includes(t)?'on':''}" onclick="this.classList.toggle('on')" data-v="${t}">${tlvl(t)}</div>`).join('')}</div></div>
+    <div class="fg"><label class="fl">Bovino / Mandria usata</label>
+      <select class="fc" id="fs-bov"><option value="">—</option>${bovs.map(b=>`<option value="${b.id}" ${s.bovino===b.id?'selected':''}>${b.nome}</option>`).join('')}</select></div>
+    <div class="divider"></div>
+    <div class="fg"><label class="fl">Qualità sessione</label>
+      <div class="star-g" id="fs-stars" data-v="${s.qualita||0}">${[1,2,3,4,5].map(i=>`<span class="star ${(s.qualita||0)>=i?'on':''}">★</span>`).join('')}</div></div>
+    <div class="fg"><label class="fl">Condizione fisica</label>
+      <select class="fc" id="fs-cond"><option value="">—</option>${['Ottima','Buona','Nella norma','Sotto tono'].map(v=>`<option value="${v}" ${s.condizione===v?'selected':''}>${v}</option>`).join('')}</select></div>
+    <div class="fg"><label class="fl">Umore / Concentrazione</label>
+      <select class="fc" id="fs-um"><option value="">—</option>${['Ottimo','Buono','Distratto','Difficile'].map(v=>`<option value="${v}" ${s.umore===v?'selected':''}>${v}</option>`).join('')}</select></div>
+    <div class="divider"></div>
+    <div class="fg"><label class="fl">Obiettivo</label><input class="fc" id="fs-obj" value="${s.obiettivo||''}" placeholder="Es. Migliorare fence work sinistro"></div>
+    <div class="fg"><label class="fl">Raggiunto?</label>
+      <select class="fc" id="fs-rag"><option value="">—</option>${['Sì','Parzialmente','No'].map(v=>`<option value="${v}" ${s.obiettivo_raggiunto===v?'selected':''}>${v}</option>`).join('')}</select></div>
+    <div class="fg"><label class="fl">Note</label><textarea class="fc" id="fs-note" placeholder="Osservazioni libere…">${s.note||''}</textarea></div>
+    <button class="btn bp bfw" onclick="saveSess('${editId||''}')">💾 Salva</button>
+  `);
+  setTimeout(()=>{
+    const ss=document.querySelectorAll('#fs-stars .star');let cur=s.qualita||0;
+    ss.forEach((st,i)=>st.addEventListener('click',()=>{cur=i+1;ss.forEach((s2,j)=>s2.classList.toggle('on',j<cur));document.getElementById('fs-stars').dataset.v=cur;}));
+  },50);
+}
+function saveSess(editId){
+  const cav=document.getElementById('fs-cav').value,dt=document.getElementById('fs-dt').value;
+  if(!cav){alert('Seleziona un cavallo');return;}if(!dt){alert('Inserisci la data');return;}
+  const trainer=document.getElementById('fs-tr').value.trim();saveTrainer(trainer);
+  const tipi=Array.from(document.querySelectorAll('#fs-tipi .chip.on')).map(c=>c.dataset.v);
+  const q=parseInt(document.getElementById('fs-stars').dataset.v||'0');
+  const sess=DB.g('sessioni');
+  const rec={id:editId||DB.id(),cavallo_id:cav,trainer,data:dt,
+    ora_inizio:document.getElementById('fs-ini').value,ora_fine:document.getElementById('fs-fin').value,
+    tipi_lavoro:tipi,bovino:document.getElementById('fs-bov').value,qualita:q,
+    condizione:document.getElementById('fs-cond').value,umore:document.getElementById('fs-um').value,
+    obiettivo:document.getElementById('fs-obj').value.trim(),obiettivo_raggiunto:document.getElementById('fs-rag').value,
+    note:document.getElementById('fs-note').value.trim()};
+  if(editId){const i=sess.findIndex(x=>x.id===editId);if(i>-1)sess[i]=rec;}else sess.push(rec);
+  DB.s('sessioni',sess);closeSheet();showVw('vw-lsess');renderSess();
+}
+function delSess(id){if(!confirm('Eliminare?'))return;DB.s('sessioni',DB.g('sessioni').filter(x=>x.id!==id));showVw('vw-lsess');renderSess();}
+
+/* ===== P3: GARE ===== */
+function renderGare(){
+  const gare=DB.g('gare'),list=document.getElementById('gare-list');if(!list)return;
+  if(!gare.length){list.innerHTML=`<div class="empty"><div class="eico">🏆</div><div class="etxt">Nessuna gara.<br>Premi + per aggiungerne una.</div></div>`;return;}
+  list.innerHTML=[...gare].sort((a,b)=>new Date(b.data_inizio)-new Date(a.data_inizio)).map(g=>{
+    const tr=(g.run||[]).length,pr=(g.run||[]).reduce((s,r)=>s+Number(r.prize_money||0),0);
+    return `<div class="card click" onclick="detGara('${g.id}')">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start">
+        <div><div style="font-weight:600;font-size:.97rem">${g.nome}</div>
+          <div style="font-size:.78rem;color:var(--text2);margin-top:3px">${fd(g.data_inizio)}${g.data_fine&&g.data_fine!==g.data_inizio?' → '+fd(g.data_fine):''}</div>
+          <div style="font-size:.75rem;color:var(--text3)">${g.luogo||''}</div></div>
+        <span class="badge bb">${g.tipo||'Standard'}</span>
+      </div>
+      <div style="display:flex;gap:12px;margin-top:9px;font-size:.78rem;color:var(--text2)">
+        <span>🏇 ${tr} run</span>${pr>0?`<span>💰 ${fc(pr)}</span>`:''}${g.organizzatore?`<span>${g.organizzatore}</span>`:''}
+      </div>
+    </div>`;}).join('');
+}
+function detGara(id){
+  curGaraId=id;
+  const g=DB.g('gare').find(x=>x.id===id);if(!g)return;
+  const cavs=DB.g('cavalli');
+  const runHtml=(g.run||[]).map(r=>{
+    const c=cavs.find(x=>x.id===r.cavallo_id),isQ=g.tipo!=='standard',tot=Number(r.go1||0)+Number(r.go2||0);
+    return `<div class="card" style="margin-bottom:8px">
+      <div style="display:flex;justify-content:space-between"><div style="font-weight:600">${c?c.nome_barn:'—'}</div><span class="badge bb">${r.categoria||''}</span></div>
+      <div style="font-size:.78rem;color:var(--text2);margin-top:3px">${r.rider||''}</div>
+      <div style="display:flex;gap:20px;margin-top:10px">
+        <div class="sblk"><div class="sblk-lbl">Go 1</div><div class="sblk-val">${r.go1||'—'}</div></div>
+        <div class="sblk"><div class="sblk-lbl">Go 2</div><div class="sblk-val">${r.go2||'—'}</div></div>
+        <div class="sblk"><div class="sblk-lbl">Totale</div><div class="sblk-val" style="color:var(--amber2)">${tot>0?tot.toFixed(1):'—'}</div></div>
+        ${isQ&&r.qualificato==='si'?`<div class="sblk"><div class="sblk-lbl">Finale</div><div class="sblk-val" style="color:var(--green-l)">${r.go_finale||'—'}</div></div>`:''}
+      </div>
+      <div style="display:flex;gap:10px;margin-top:7px;font-size:.78rem;color:var(--text2);flex-wrap:wrap">
+        ${r.placement?`<span>🏅 ${r.placement}°</span>`:''}${r.prize_money?`<span>💰 ${fc(r.prize_money)}</span>`:''}
+        ${r.qualita_vacche?`<span>🐄 ${r.qualita_vacche}</span>`:''}${r.penalita?`<span style="color:var(--red-l)">⚠️ ${r.penalita}</span>`:''}
+      </div>
+      ${r.note?`<div style="font-size:.78rem;color:var(--text3);margin-top:5px;font-style:italic">${r.note}</div>`:''}
+    </div>`;}).join('');
+  document.getElementById('vw-dgara').innerHTML=`
+    <button class="back" onclick="showVw('vw-lgare');renderGare()">← Tutte le gare</button>
+    <div class="dname">${g.nome}</div>
+    <div style="color:var(--text2);font-size:.85rem;margin-top:4px">${fd(g.data_inizio)}${g.data_fine&&g.data_fine!==g.data_inizio?' → '+fd(g.data_fine):''}</div>
+    <div style="display:flex;gap:7px;margin-top:8px;flex-wrap:wrap">
+      <span class="badge bb">${g.tipo||'Standard'}</span>
+      ${g.organizzatore?`<span class="badge bk">${g.organizzatore}</span>`:''}
+      ${g.luogo?`<span class="badge bk">📍 ${g.luogo}</span>`:''}
+    </div>
+    ${g.note?`<div style="font-size:.82rem;color:var(--text2);margin-top:10px;font-style:italic">${g.note}</div>`:''}
+    <div class="divider"></div><div class="sub-head">Run</div>
+    ${runHtml||'<div style="color:var(--text3);font-size:.87rem;margin-bottom:12px">Nessuna run registrata</div>'}
+    <div class="act-row">
+      <button class="btn bo bsm" onclick="formGara('${g.id}')">✏️ Modifica gara</button>
+      <button class="btn bp bsm" onclick="formRun('${g.id}')">+ Aggiungi run</button>
+      <button class="btn bd bsm" onclick="delGara('${g.id}')">🗑️</button>
+    </div>`;
+  showVw('vw-dgara');
+}
+function formGara(editId){
+  const g=editId?DB.g('gare').find(x=>x.id===editId):{};
+  openOv(`
+    <div class="stitle">${editId?'✏️ Modifica Gara':'🏆 Nuova Gara'}<button class="sclose" onclick="closeSheet()">✕</button></div>
+    <div class="fg"><label class="fl">Nome show <span class="req">*</span></label><input class="fc" id="fg-nome" value="${g.nome||''}" placeholder="Es. NCHA Futurity 2025"></div>
+    <div class="fg"><label class="fl">Tipo gara</label>
+      <select class="fc" id="fg-tipo">${['standard','futurity','derby','superstakes','altro'].map(v=>`<option value="${v}" ${(g.tipo||'standard')===v?'selected':''}>${v.charAt(0).toUpperCase()+v.slice(1)}</option>`).join('')}</select></div>
+    <div class="fr2">
+      <div class="fg"><label class="fl">Data inizio <span class="req">*</span></label><input type="date" class="fc" id="fg-di" value="${g.data_inizio||''}"></div>
+      <div class="fg"><label class="fl">Data fine</label><input type="date" class="fc" id="fg-df" value="${g.data_fine||''}"></div>
+    </div>
+    <div class="fg"><label class="fl">Luogo</label><input class="fc" id="fg-luo" value="${g.luogo||''}" placeholder="Città, arena…"></div>
+    <div class="fg"><label class="fl">Organizzatore</label>
+      <select class="fc" id="fg-org"><option value="">—</option>${['NCHA','NCHA of Italy','AICA','Club locale','Altro'].map(v=>`<option value="${v}" ${g.organizzatore===v?'selected':''}>${v}</option>`).join('')}</select></div>
+    <div class="fg"><label class="fl">Note</label><textarea class="fc" id="fg-note">${g.note||''}</textarea></div>
+    <button class="btn bp bfw" onclick="saveGara('${editId||''}')">💾 Salva</button>
+  `);
+}
+function saveGara(editId){
+  const nome=document.getElementById('fg-nome').value.trim(),di=document.getElementById('fg-di').value;
+  if(!nome||!di){alert('Nome e data obbligatori');return;}
+  const gare=DB.g('gare');
+  const rec={id:editId||DB.id(),nome,tipo:document.getElementById('fg-tipo').value,data_inizio:di,
+    data_fine:document.getElementById('fg-df').value,luogo:document.getElementById('fg-luo').value.trim(),
+    organizzatore:document.getElementById('fg-org').value,note:document.getElementById('fg-note').value.trim(),
+    run:editId?(gare.find(x=>x.id===editId)||{}).run||[]:[]}; 
+  if(editId){const i=gare.findIndex(x=>x.id===editId);if(i>-1)gare[i]=rec;}else gare.push(rec);
+  DB.s('gare',gare);closeSheet();showVw('vw-lgare');renderGare();
+}
+function formRun(garaId){
+  const g=DB.g('gare').find(x=>x.id===garaId),cavs=DB.g('cavalli'),isQ=g.tipo!=='standard';
+  openOv(`
+    <div class="stitle">🏇 Nuova Run — ${g.nome}<button class="sclose" onclick="closeSheet()">✕</button></div>
+    <div class="fg"><label class="fl">Cavallo <span class="req">*</span></label>
+      <select class="fc" id="fr-cav"><option value="">Seleziona…</option>${cavs.map(c=>`<option value="${c.id}">${c.nome_barn}</option>`).join('')}</select></div>
+    <div class="fg"><label class="fl">Rider</label><input class="fc" id="fr-rid" placeholder="Nome rider"></div>
+    <div class="fg"><label class="fl">Categoria</label>
+      <select class="fc" id="fr-cat"><option value="">—</option>${['Open','Non-Pro','Amateur','Youth','Ltd Open','Ltd Non-Pro','Altro'].map(v=>`<option value="${v}">${v}</option>`).join('')}</select></div>
+    <div class="fr2">
+      <div class="fg"><label class="fl">Punteggio Go 1</label><input type="number" class="fc" id="fr-g1" placeholder="72.5" step="0.5" min="60" max="80"></div>
+      <div class="fg"><label class="fl">Punteggio Go 2</label><input type="number" class="fc" id="fr-g2" placeholder="74.0" step="0.5" min="60" max="80"></div>
+    </div>
+    ${isQ?`<div class="fg"><label class="fl">Qualificato alla finale?</label>
+      <select class="fc" id="fr-ql" onchange="document.getElementById('fr-fs').style.display=this.value==='si'?'block':'none'">
+        <option value="no">No</option><option value="si">Sì</option></select></div>
+      <div id="fr-fs" style="display:none"><div class="fg"><label class="fl">Punteggio Finale</label><input type="number" class="fc" id="fr-gf" placeholder="75.0" step="0.5" min="60" max="80"></div></div>`
+    :`<input type="hidden" id="fr-ql" value="no"><input type="hidden" id="fr-gf" value="">`}
+    <div class="fr2">
+      <div class="fg"><label class="fl">Placement</label><input type="number" class="fc" id="fr-plc" placeholder="1" min="1"></div>
+      <div class="fg"><label class="fl">Prize money ($)</label><input type="number" class="fc" id="fr-pm" placeholder="0.00" step="0.01"></div>
+    </div>
+    <div class="fg"><label class="fl">Qualità vacche</label>
+      <select class="fc" id="fr-vac"><option value="">—</option>${['Ottime','Buone','Nella norma','Scarse'].map(v=>`<option value="${v}">${v}</option>`).join('')}</select></div>
+    <div class="fg"><label class="fl">Penalità</label><input class="fc" id="fr-pen" placeholder="Es. Lost cow, Out of bounds…"></div>
+    <div class="fg"><label class="fl">Note</label><textarea class="fc" id="fr-note"></textarea></div>
+    <button class="btn bp bfw" onclick="saveRun('${garaId}')">💾 Salva Run</button>
+  `);
+}
+function saveRun(garaId){
+  if(!document.getElementById('fr-cav').value){alert('Seleziona un cavallo');return;}
+  const gare=DB.g('gare'),idx=gare.findIndex(x=>x.id===garaId);if(idx<0)return;
+  const run={id:DB.id(),cavallo_id:document.getElementById('fr-cav').value,
+    rider:document.getElementById('fr-rid').value.trim(),categoria:document.getElementById('fr-cat').value,
+    go1:document.getElementById('fr-g1').value,go2:document.getElementById('fr-g2').value,
+    qualificato:document.getElementById('fr-ql').value,
+    go_finale:document.getElementById('fr-gf')?document.getElementById('fr-gf').value:'',
+    placement:document.getElementById('fr-plc').value,prize_money:document.getElementById('fr-pm').value,
+    qualita_vacche:document.getElementById('fr-vac').value,
+    penalita:document.getElementById('fr-pen').value.trim(),note:document.getElementById('fr-note').value.trim()};
+  if(!gare[idx].run)gare[idx].run=[];
+  gare[idx].run.push(run);
+  DB.s('gare',gare);closeSheet();detGara(garaId); // rimane nel dettaglio gara
+}
+function delGara(id){if(!confirm('Eliminare questa gara?'))return;DB.s('gare',DB.g('gare').filter(x=>x.id!==id));showVw('vw-lgare');renderGare();}
+
+/* ===== P4: BOVINI ===== */
+function renderBov(){
+  const bovs=DB.g('bovini'),list=document.getElementById('bov-list'),alerts=document.getElementById('bov-alerts');if(!list)return;
+  const warn=bovs.filter(b=>b.stato!=='esaurito'&&b.stato!=='venduto'&&b.data_ingresso&&days(b.data_ingresso)>=50);
+  if(alerts)alerts.innerHTML=warn.map(b=>{const d=days(b.data_ingresso);return`<div class="alert ${d>=60?'ar':'ay'}">⚠️ <div><strong>${b.nome}</strong> — ${d} giorni in ranch${d>=60?' — Da sostituire!':' — Quasi esaurito'}</div></div>`;}).join('');
+  if(!bovs.length){list.innerHTML=`<div class="empty"><div class="eico">🐄</div><div class="etxt">Nessun bovino.<br>Premi + per aggiungerne uno.</div></div>`;return;}
+  list.innerHTML=bovs.map(b=>{
+    const d=b.data_ingresso?days(b.data_ingresso):null;
+    return `<div class="card click" onclick="detBov('${b.id}')">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start">
+        <div><div style="font-weight:600">${b.nome}</div>
+          <div style="font-size:.78rem;color:var(--text2);margin-top:2px">${b.tipo_bovino||''} · ${b.gestione==='mandria'?(b.num_capi||'?')+' capi — Mandria':'Individuale'}</div>
+          ${b.provenienza?`<div style="font-size:.72rem;color:var(--text3)">${b.provenienza==='fida'?'In fida':'Acquistato'}${b.provenienza_da?' da '+b.provenienza_da:''}</div>`:''}
+        </div>
+        <div style="text-align:right">
+          <span class="badge ${sbadge(b.stato)}">${slabel(b.stato)}</span>
+          ${d!==null?`<div style="font-size:.7rem;color:${d>=60?'var(--red-l)':d>=50?'var(--yellow-l)':'var(--text3)'};margin-top:4px">${d}gg</div>`:''}
+        </div>
+      </div>
+      ${d!==null&&b.stato!=='esaurito'&&b.stato!=='venduto'?`<div class="pbg"><div class="pfl ${d>=60?'r':d>=50?'y':'g'}" style="width:${Math.min(100,Math.round(d/60*100))}%"></div></div>`:''}
+    </div>`;}).join('');
+}
+function detBov(id){
+  const b=DB.g('bovini').find(x=>x.id===id);if(!b)return;
+  const d=b.data_ingresso?days(b.data_ingresso):null,sess=DB.g('sessioni').filter(s=>s.bovino===id);
+  document.getElementById('vw-dbov').innerHTML=`
+    <button class="back" onclick="showVw('vw-lbov');renderBov()">← Tutti i bovini</button>
+    <div class="dname">${b.nome}</div>
+    <div style="margin-top:5px"><span class="badge ${sbadge(b.stato)}">${slabel(b.stato)}</span></div>
+    <div class="dsec" style="margin-top:16px"><div class="dsth">Anagrafica</div>
+      ${dr('Tipo',b.tipo_bovino)}${dr('Gestione',b.gestione==='mandria'?'Mandria ('+(b.num_capi||'?')+' capi)':'Individuale')}
+      ${dr('Provenienza',b.provenienza==='fida'?'In fida':'Acquistato')}${dr('Da',b.provenienza_da)}
+      ${dr('Data ingresso',fd(b.data_ingresso))}${d!==null?dr('Giorni in ranch',d+' giorni'):''}
+    </div>
+    ${b.stato==='fermo'?`<div class="alert ar">⚠️ Fermo sanitario: ${b.note_salute||'—'}${b.data_fermo?' dal '+fd(b.data_fermo):''}</div>`:''}
+    <div style="font-size:.78rem;color:var(--text3);margin-bottom:8px">Sessioni in cui usato: <strong style="color:var(--text)">${sess.length}</strong></div>
+    <div class="act-row">
+      <button class="btn bo bsm" onclick="formBov('${b.id}')">✏️ Modifica</button>
+      <button class="btn bd bsm" onclick="delBov('${b.id}')">🗑️ Elimina</button>
+    </div>`;
+  showVw('vw-dbov');
+}
+function formBov(editId){
+  const b=editId?DB.g('bovini').find(x=>x.id===editId):{};
+  openOv(`
+    <div class="stitle">${editId?'✏️ Modifica':'🐄 Nuovo Bovino / Mandria'}<button class="sclose" onclick="closeSheet()">✕</button></div>
+    <div class="fg"><label class="fl">Nome / Nomignolo <span class="req">*</span></label><input class="fc" id="fb-nome" value="${b.nome||''}" placeholder="Es. Vitelli Marzo, Rocky…"></div>
+    <div class="fr2">
+      <div class="fg"><label class="fl">Tipo</label>
+        <select class="fc" id="fb-tipo"><option value="">—</option>${['Vitello','Zebù','Bisonte','Bufalo','Altro'].map(v=>`<option value="${v}" ${b.tipo_bovino===v?'selected':''}>${v}</option>`).join('')}</select></div>
+      <div class="fg"><label class="fl">Gestione</label>
+        <select class="fc" id="fb-gest" onchange="document.getElementById('fb-mand').style.display=this.value==='mandria'?'block':'none'">
+          <option value="individuale" ${(b.gestione||'individuale')==='individuale'?'selected':''}>Individuale</option>
+          <option value="mandria" ${b.gestione==='mandria'?'selected':''}>Mandria</option>
+        </select></div>
+    </div>
+    <div id="fb-mand" style="display:${b.gestione==='mandria'?'block':'none'}">
+      <div class="fg"><label class="fl">Numero capi</label><input type="number" class="fc" id="fb-ncapi" value="${b.num_capi||''}" placeholder="Es. 10" min="1"></div>
+    </div>
+    <div class="fr2">
+      <div class="fg"><label class="fl">Provenienza</label>
+        <select class="fc" id="fb-prov"><option value="">—</option>
+          <option value="acquistato" ${b.provenienza==='acquistato'?'selected':''}>Acquistato</option>
+          <option value="fida" ${b.provenienza==='fida'?'selected':''}>In fida</option>
+        </select></div>
+      <div class="fg"><label class="fl">Da chi</label><input class="fc" id="fb-pda" value="${b.provenienza_da||''}" placeholder="Fornitore"></div>
+    </div>
+    <div class="fg"><label class="fl">Data ingresso</label><input type="date" class="fc" id="fb-dt" value="${b.data_ingresso||''}"></div>
+    <div class="fg"><label class="fl">Stato</label>
+      <select class="fc" id="fb-sta" onchange="document.getElementById('fb-ferm').style.display=this.value==='fermo'?'block':'none'">
+        ${['disponibile','rotazione','esaurito','venduto','fermo'].map(v=>`<option value="${v}" ${(b.stato||'disponibile')===v?'selected':''}>${slabel(v)}</option>`).join('')}
+      </select></div>
+    <div id="fb-ferm" style="display:${b.stato==='fermo'?'block':'none'}">
+      <div class="fg"><label class="fl">Problema sanitario</label><input class="fc" id="fb-nsal" value="${b.note_salute||''}" placeholder="Descrizione"></div>
+      <div class="fg"><label class="fl">Data inizio fermo</label><input type="date" class="fc" id="fb-dfm" value="${b.data_fermo||''}"></div>
+    </div>
+    <button class="btn bp bfw" onclick="saveBov('${editId||''}')">💾 Salva</button>
+  `);
+}
+function saveBov(editId){
+  const nome=document.getElementById('fb-nome').value.trim();if(!nome){alert('Inserisci il nome');return;}
+  const bovs=DB.g('bovini');
+  const rec={id:editId||DB.id(),nome,tipo_bovino:document.getElementById('fb-tipo').value,
+    gestione:document.getElementById('fb-gest').value,
+    num_capi:document.getElementById('fb-ncapi')?document.getElementById('fb-ncapi').value:'',
+    provenienza:document.getElementById('fb-prov').value,provenienza_da:document.getElementById('fb-pda').value.trim(),
+    data_ingresso:document.getElementById('fb-dt').value,stato:document.getElementById('fb-sta').value,
+    note_salute:document.getElementById('fb-nsal')?document.getElementById('fb-nsal').value.trim():'',
+    data_fermo:document.getElementById('fb-dfm')?document.getElementById('fb-dfm').value:''};
+  if(editId){const i=bovs.findIndex(x=>x.id===editId);if(i>-1)bovs[i]=rec;}else bovs.push(rec);
+  DB.s('bovini',bovs);closeSheet();showVw('vw-lbov');renderBov();
+}
+function delBov(id){if(!confirm('Eliminare?'))return;DB.s('bovini',DB.g('bovini').filter(x=>x.id!==id));showVw('vw-lbov');renderBov();}
+
+/* ===== P5: CALENDARIO ===== */
+function renderCal(){
+  const oggi=new Date(),a=calDt.getFullYear(),m=calDt.getMonth();
+  const lbl=calDt.toLocaleDateString('it-IT',{month:'long',year:'numeric'});
+  document.getElementById('cal-lbl').textContent=lbl.charAt(0).toUpperCase()+lbl.slice(1);
+  document.getElementById('cal-hdr').innerHTML=['Lu','Ma','Me','Gi','Ve','Sa','Do'].map(g=>`<div class="cdh">${g}</div>`).join('');
+  const primo=new Date(a,m,1),ultimo=new Date(a,m+1,0);
+  let dow=primo.getDay();if(dow===0)dow=7;dow--;
+  const sess=DB.g('sessioni'),gare=DB.g('gare'),sal=DB.g('salute'),evs=DB.g('eventi');
+  function dd(a2,m2,d2){
+    const ds=`${a2}-${String(m2+1).padStart(2,'0')}-${String(d2).padStart(2,'0')}`;
+    const r=[];
+    if(sess.some(s=>s.data===ds))r.push('g');
+    if(gare.some(g=>g.data_inizio===ds||g.data_fine===ds))r.push('r');
+    if(sal.some(s=>s.data===ds||s.prossima_scadenza===ds))r.push('b');
+    if(evs.some(e=>e.data===ds))r.push('o2');
+    return r;
+  }
+  let html='';
+  for(let i=0;i<dow;i++){const d=new Date(a,m,1-(dow-i));html+=`<div class="cday oth"><div class="cdn">${d.getDate()}</div></div>`;}
+  for(let d=1;d<=ultimo.getDate();d++){
+    const iT=d===oggi.getDate()&&m===oggi.getMonth()&&a===oggi.getFullYear();
+    const dots=dd(a,m,d);
+    html+=`<div class="cday ${iT?'tod':''}" onclick="showDay(${a},${m},${d})"><div class="cdn">${d}</div><div class="cdots">${dots.map(c=>`<div class="cdot d${c}"></div>`).join('')}</div></div>`;
+  }
+  const rem=(dow+ultimo.getDate())%7;if(rem>0)for(let i=1;i<=7-rem;i++)html+=`<div class="cday oth"><div class="cdn">${i}</div></div>`;
+  document.getElementById('cal-body').innerHTML=html;
+  renderCalEvs();
+}
+function renderCalEvs(){
+  const oggi=new Date();oggi.setHours(0,0,0,0);
+  const evs=[];
+  DB.g('sessioni').forEach(s=>{if(new Date(s.data)>=oggi){const c=DB.g('cavalli').find(x=>x.id===s.cavallo_id);evs.push({data:s.data,col:'var(--green-l)',lbl:`📋 Sessione: ${c?c.nome_barn:'—'}`});}});
+  DB.g('gare').forEach(g=>{if(new Date(g.data_inizio)>=oggi)evs.push({data:g.data_inizio,col:'var(--red-l)',lbl:`🏆 ${g.nome}`});});
+  DB.g('salute').forEach(s=>{if(s.prossima_scadenza&&new Date(s.prossima_scadenza)>=oggi)evs.push({data:s.prossima_scadenza,col:'var(--blue-l)',lbl:`🏥 ${s.tipo_evento||''} — ${s.soggetto_nome||''}`});});
+  DB.g('eventi').forEach(e=>{if(new Date(e.data)>=oggi)evs.push({data:e.data,col:'var(--orange-l)',lbl:e.titolo||'Evento'});});
+  evs.sort((a,b)=>new Date(a.data)-new Date(b.data));
+  const list=document.getElementById('cal-evs');if(!list)return;
+  if(!evs.length){list.innerHTML=`<div style="color:var(--text3);font-size:.87rem">Nessun evento in programma</div>`;return;}
+  list.innerHTML=evs.slice(0,12).map(e=>`
+    <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border)">
+      <div style="width:7px;height:7px;border-radius:50%;background:${e.col};flex-shrink:0"></div>
+      <div style="flex:1;font-size:.84rem">${e.lbl}</div>
+      <div style="font-size:.72rem;color:var(--text3)">${fd(e.data)}</div>
+    </div>`).join('');
+}
+function showDay(a,m,d){
+  const ds=`${a}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+  const sess=DB.g('sessioni').filter(s=>s.data===ds),gare=DB.g('gare').filter(g=>g.data_inizio===ds||g.data_fine===ds);
+  const sal=DB.g('salute').filter(s=>s.data===ds||s.prossima_scadenza===ds),ev=DB.g('eventi').filter(e=>e.data===ds);
+  const cavs=DB.g('cavalli');let html='';
+  if(!sess.length&&!gare.length&&!sal.length&&!ev.length)html=`<div style="color:var(--text3);font-size:.87rem">Nessun evento</div>`;
+  sess.forEach(s=>{const c=cavs.find(x=>x.id===s.cavallo_id);html+=`<div class="alert ag">📋 ${c?c.nome_barn:'—'} ${s.trainer?'('+s.trainer+')':''}</div>`;});
+  gare.forEach(g=>html+=`<div class="alert ar">🏆 ${g.nome}</div>`);
+  sal.forEach(s=>html+=`<div class="alert ay">🏥 ${s.tipo_evento||'—'} — ${s.soggetto_nome||''}</div>`);
+  ev.forEach(e=>html+=`<div class="card" style="margin-bottom:6px;font-size:.85rem">📅 ${e.titolo}</div>`);
+  openOv(`<div class="stitle">${fd(ds)}<button class="sclose" onclick="closeSheet()">✕</button></div>${html}`);
+}
+function calPrev(){calDt.setMonth(calDt.getMonth()-1);renderCal();}
+function calNext(){calDt.setMonth(calDt.getMonth()+1);renderCal();}
+function formEv(){
+  openOv(`
+    <div class="stitle">📅 Nuovo Evento<button class="sclose" onclick="closeSheet()">✕</button></div>
+    <div class="fg"><label class="fl">Titolo <span class="req">*</span></label><input class="fc" id="fe-tit" placeholder="Es. Ferratura, Visita vet…"></div>
+    <div class="fg"><label class="fl">Data <span class="req">*</span></label><input type="date" class="fc" id="fe-dt"></div>
+    <div class="fg"><label class="fl">Note</label><textarea class="fc" id="fe-note" placeholder="Dettagli…"></textarea></div>
+    <button class="btn bp bfw" onclick="saveEv()">💾 Salva</button>
+  `);
+}
+function saveEv(){
+  const t=document.getElementById('fe-tit').value.trim(),d=document.getElementById('fe-dt').value;
+  if(!t||!d){alert('Titolo e data obbligatori');return;}
+  const ev=DB.g('eventi');ev.push({id:DB.id(),titolo:t,data:d,note:document.getElementById('fe-note').value.trim()});
+  DB.s('eventi',ev);closeSheet();renderCal();
+}
+
+/* ===== P6: SALUTE ===== */
+function renderSal(){
+  const sal=DB.g('salute'),list=document.getElementById('sal-list'),alerts=document.getElementById('sal-alerts');if(!list)return;
+  const oggi=new Date();oggi.setHours(0,0,0,0);
+  const scad=sal.filter(s=>s.prossima_scadenza&&new Date(s.prossima_scadenza)<=new Date(oggi.getTime()+30*864e5));
+  if(alerts)alerts.innerHTML=scad.map(s=>{const gg=Math.floor((new Date(s.prossima_scadenza)-oggi)/864e5);return`<div class="alert ${gg<=0?'ar':'ay'}">⏰ <div><strong>${s.soggetto_nome||'—'}</strong> — ${s.tipo_evento}: ${gg<=0?'SCADUTO':'tra '+gg+' giorni'}</div></div>`;}).join('');
+  let fil=sal.filter(s=>fSalSt==='tutti'||s.tipo_evento===fSalSt);fil.sort((a,b)=>new Date(b.data)-new Date(a.data));
+  if(!fil.length){list.innerHTML=`<div class="empty"><div class="eico">🏥</div><div class="etxt">Nessun evento sanitario.<br>Premi + per aggiungerne uno.</div></div>`;return;}
+  list.innerHTML=fil.map(s=>{
+    const sc=s.prossima_scadenza?new Date(s.prossima_scadenza):null,sc2=sc&&sc<=oggi,imm=sc&&!sc2&&(sc-oggi)<=30*864e5;
+    return `<div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start">
+        <div><div style="font-weight:600;font-size:.92rem">${s.tipo_evento||'—'}</div>
+          <div style="font-size:.78rem;color:var(--text2);margin-top:2px">${s.soggetto_nome||'—'} · ${fd(s.data)}</div>
+          ${s.veterinario?`<div style="font-size:.72rem;color:var(--text3)">${s.veterinario}</div>`:''}
+        </div>
+        ${sc?`<span class="badge ${sc2?'br':imm?'by':'bk'}">⏰ ${fd(s.prossima_scadenza)}</span>`:''}
+      </div>
+      ${s.prodotto?`<div style="font-size:.78rem;color:var(--text2);margin-top:5px">💊 ${s.prodotto}${s.dosaggio?' · '+s.dosaggio:''}${s.durata?' · '+s.durata:''}</div>`:''}
+      ${s.note?`<div style="font-size:.78rem;color:var(--text3);margin-top:5px">${s.note}</div>`:''}
+      <div style="display:flex;justify-content:flex-end;margin-top:8px"><button class="btn bd bsm" onclick="delSal('${s.id}')">🗑️</button></div>
+    </div>`;}).join('');
+}
+function fSal(el,f){fSalSt=f;document.querySelectorAll('#fb-sal .fchip').forEach(c=>c.classList.remove('on'));el.classList.add('on');renderSal();}
+function formSal(){
+  const cavs=DB.g('cavalli'),bovs=DB.g('bovini');
+  openOv(`
+    <div class="stitle">🏥 Evento Sanitario<button class="sclose" onclick="closeSheet()">✕</button></div>
+    <div class="fg"><label class="fl">Soggetto <span class="req">*</span></label>
+      <select class="fc" id="fsa-sog">
+        <option value="">Seleziona…</option>
+        <optgroup label="Cavalli">${cavs.map(c=>`<option value="cav_${c.id}" data-nome="${c.nome_barn}">${c.nome_barn}</option>`).join('')}</optgroup>
+        <optgroup label="Bovini">${bovs.map(b=>`<option value="bov_${b.id}" data-nome="${b.nome}">${b.nome}</option>`).join('')}</optgroup>
+      </select></div>
+    <div class="fg"><label class="fl">Tipo evento <span class="req">*</span></label>
+      <select class="fc" id="fsa-tp" onchange="document.getElementById('fsa-prod-row').style.display=['trattamento','intervento'].includes(this.value)?'block':'none'">
+        <option value="">—</option>${['visita','vaccinazione','ferratura','trattamento','intervento','altro'].map(v=>`<option value="${v}">${v.charAt(0).toUpperCase()+v.slice(1)}</option>`).join('')}
+      </select></div>
+    <div id="fsa-prod-row" style="display:none">
+      <div class="fg"><label class="fl">Prodotto / Farmaco</label><input class="fc" id="fsa-prod" placeholder="Es. Bute, Ivermectina, Penicillina…"></div>
+      <div class="fr2">
+        <div class="fg"><label class="fl">Dosaggio</label><input class="fc" id="fsa-dose" placeholder="Es. 2g, 5ml…"></div>
+        <div class="fg"><label class="fl">Durata</label><input class="fc" id="fsa-dur" placeholder="Es. 5 giorni"></div>
+      </div>
+    </div>
+    <div class="fg"><label class="fl">Data <span class="req">*</span></label><input type="date" class="fc" id="fsa-dt"></div>
+    <div class="fg"><label class="fl">Veterinario / Maniscalco</label><input class="fc" id="fsa-vet" placeholder="Nome"></div>
+    <div class="fg"><label class="fl">Prossima scadenza</label><input type="date" class="fc" id="fsa-sc"></div>
+    <div class="fg"><label class="fl">Note</label><textarea class="fc" id="fsa-note" placeholder="Dettagli, prodotti usati…"></textarea></div>
+    <button class="btn bp bfw" onclick="saveSal()">💾 Salva</button>
+  `);
+}
+function saveSal(){
+  const sog=document.getElementById('fsa-sog').value,tp=document.getElementById('fsa-tp').value,dt=document.getElementById('fsa-dt').value;
+  if(!sog||!tp||!dt){alert('Soggetto, tipo e data obbligatori');return;}
+  const sel=document.getElementById('fsa-sog'),nome=sel.options[sel.selectedIndex].dataset.nome||sog;
+  const sal=DB.g('salute');
+  sal.push({id:DB.id(),soggetto_id:sog,soggetto_nome:nome,tipo_evento:tp,data:dt,
+    prodotto:document.getElementById('fsa-prod')?document.getElementById('fsa-prod').value.trim():'',
+    dosaggio:document.getElementById('fsa-dose')?document.getElementById('fsa-dose').value.trim():'',
+    durata:document.getElementById('fsa-dur')?document.getElementById('fsa-dur').value.trim():'',
+    veterinario:document.getElementById('fsa-vet').value.trim(),prossima_scadenza:document.getElementById('fsa-sc').value,
+    note:document.getElementById('fsa-note').value.trim()});
+  DB.s('salute',sal);closeSheet();renderSal();
+}
+function delSal(id){if(!confirm('Eliminare?'))return;DB.s('salute',DB.g('salute').filter(x=>x.id!==id));renderSal();}
+
+/* ===== P7: DASHBOARD ===== */
+function renderDash(){
+  const cavs=DB.g('cavalli'),sess=DB.g('sessioni'),gare=DB.g('gare'),bovs=DB.g('bovini');
+  const ora=new Date();
+  const attivi=cavs.filter(c=>c.stato==='attivo'||c.stato==='gara').length;
+  const sessM=sess.filter(s=>{const d=new Date(s.data);return d.getMonth()===ora.getMonth()&&d.getFullYear()===ora.getFullYear();}).length;
+  let eT=0;gare.forEach(g=>(g.run||[]).forEach(r=>eT+=Number(r.prize_money||0)));cavs.forEach(c=>eT+=Number(c.earnings_pre||0));
+  const bovAl=bovs.filter(b=>b.data_ingresso&&days(b.data_ingresso)>=50&&b.stato!=='esaurito'&&b.stato!=='venduto').length;
+
+  /* ---------- 1. INDICE PROGRESSIONE ---------- */
+  const progH=cavs.filter(c=>c.stato==='attivo'||c.stato==='gara').map(c=>{
+    const cs=sess.filter(s=>s.cavallo_id===c.id&&s.qualita).sort((a,b)=>new Date(a.data)-new Date(b.data));
+    if(cs.length<2) return `<div class="pcard"><div class="phdr"><span class="pname">${c.nome_barn}</span><span style="font-size:.72rem;color:var(--text3)">Dati insufficienti</span></div></div>`;
+    const mid=Math.floor(cs.length/2);
+    const p1=cs.slice(0,mid).reduce((s,x)=>s+x.qualita,0)/mid;
+    const p2=cs.slice(mid).reduce((s,x)=>s+x.qualita,0)/(cs.length-mid);
+    const diff=p2-p1,dir=diff>0.2?'up':diff<-0.2?'dn':'st',ico=dir==='up'?'↑':dir==='dn'?'↓':'→';
+    const l6=cs.slice(-6);
+    return `<div class="pcard">
+      <div class="phdr"><span class="pname">${c.nome_barn}</span><span class="pidx ${dir}">${ico} ${Math.abs(diff).toFixed(1)} pts</span></div>
+      <div class="mchart">${l6.map((s,i)=>`<div class="mbar ${i===l6.length-1?'hi':''}" style="height:${Math.round((s.qualita/5)*100)}%"></div>`).join('')}</div>
+      <div style="font-size:.68rem;color:var(--text3);margin-top:3px">${cs.length} sessioni · media recente: ${p2.toFixed(1)}/5</div>
+    </div>`;
+  }).join('');
+
+  /* ---------- 2. INDICE FRESCHEZZA ---------- */
+  const freschH=cavs.filter(c=>c.stato==='attivo'||c.stato==='gara').map(c=>{
+    const cs=sess.filter(s=>s.cavallo_id===c.id&&(s.condizione||s.umore)).sort((a,b)=>new Date(b.data)-new Date(a.data)).slice(0,3);
+    if(!cs.length) return '';
+    const condMap={'Ottima':5,'Buona':4,'Nella norma':3,'Sotto tono':1};
+    const umoreMap={'Ottimo':5,'Buono':4,'Distratto':2,'Difficile':1};
+    let totC=0,totU=0,nC=0,nU=0;
+    cs.forEach(s=>{if(s.condizione&&condMap[s.condizione]){totC+=condMap[s.condizione];nC++;}if(s.umore&&umoreMap[s.umore]){totU+=umoreMap[s.umore];nU++;}});
+    const mC=nC?totC/nC:null,mU=nU?totU/nU:null;
+    const media=((mC||0)+(mU||0))/(( mC?1:0)+(mU?1:0)||1);
+    const col=media>=4?'var(--green-l)':media>=3?'var(--yellow-l)':'var(--red-l)';
+    const lbl=media>=4?'Pronto':'Monitorare';
+    // alert se sotto tono 3 consecutive
+    const allUnder=cs.length>=3&&cs.every(s=>s.condizione==='Sotto tono'||s.umore==='Difficile'||s.umore==='Distratto');
+    return `<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border)">
+      <div>
+        <span style="font-weight:600;font-size:.88rem">${c.nome_barn}</span>
+        ${allUnder?`<span style="font-size:.7rem;color:var(--red-l);margin-left:8px">⚠️ Sotto tono 3 sess. consecutive</span>`:''}
+      </div>
+      <div style="display:flex;align-items:center;gap:8px">
+        <div style="font-size:.72rem;color:${col}">${lbl}</div>
+        <div style="width:80px;height:5px;background:var(--bg3);border-radius:3px;overflow:hidden">
+          <div style="height:100%;width:${Math.round(media/5*100)}%;background:${col};border-radius:3px"></div>
+        </div>
+        <div style="font-size:.78rem;color:var(--text2);min-width:28px">${media.toFixed(1)}/5</div>
+      </div>
+    </div>`;
+  }).filter(Boolean).join('');
+
+  /* ---------- 3. AFFINITA TRAINER-CAVALLO ---------- */
+  const affMap={};
+  sess.forEach(s=>{
+    if(!s.trainer||!s.qualita||!s.cavallo_id) return;
+    const k=s.trainer+'|||'+s.cavallo_id;
+    if(!affMap[k]) affMap[k]={trainer:s.trainer,cavallo_id:s.cavallo_id,tot:0,n:0};
+    affMap[k].tot+=s.qualita; affMap[k].n++;
+  });
+  const affList=Object.values(affMap).filter(x=>x.n>=2).map(x=>({...x,media:x.tot/x.n})).sort((a,b)=>b.media-a.media).slice(0,5);
+  const affH=affList.map(x=>{
+    const c=cavs.find(v=>v.id===x.cavallo_id);
+    return `<div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid var(--border)">
+      <div style="font-size:.85rem"><span style="font-weight:600">${x.trainer}</span> + <span style="color:var(--amber)">${c?c.nome_barn:'—'}</span></div>
+      <div style="display:flex;align-items:center;gap:6px">
+        <span style="color:var(--amber);font-size:.82rem">${stars(Math.round(x.media))}</span>
+        <span style="font-size:.75rem;color:var(--text2)">${x.media.toFixed(1)} · ${x.n} sess.</span>
+      </div>
+    </div>`;
+  }).join('');
+
+  /* ---------- 4. CORRELAZIONE RIPOSO → PERFORMANCE ---------- */
+  const riposoH=cavs.filter(c=>c.stato==='attivo'||c.stato==='gara').map(c=>{
+    const cs=sess.filter(s=>s.cavallo_id===c.id&&s.qualita).sort((a,b)=>new Date(a.data)-new Date(b.data));
+    if(cs.length<3) return '';
+    const buckets={'1-2gg':{tot:0,n:0},'3-5gg':{tot:0,n:0},'6-10gg':{tot:0,n:0},'11+gg':{tot:0,n:0}};
+    for(let i=1;i<cs.length;i++){
+      const gap=Math.floor((new Date(cs[i].data)-new Date(cs[i-1].data))/864e5);
+      const k=gap<=2?'1-2gg':gap<=5?'3-5gg':gap<=10?'6-10gg':'11+gg';
+      buckets[k].tot+=cs[i].qualita; buckets[k].n++;
+    }
+    const rows=Object.entries(buckets).filter(([,v])=>v.n>0).map(([k,v])=>{
+      const m=v.tot/v.n;
+      return `<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
+        <span style="font-size:.72rem;color:var(--text2);min-width:40px">${k}</span>
+        <div style="flex:1;height:4px;background:var(--bg3);border-radius:2px;overflow:hidden">
+          <div style="height:100%;width:${Math.round(m/5*100)}%;background:var(--amber);border-radius:2px"></div>
+        </div>
+        <span style="font-size:.72rem;color:var(--text2);min-width:28px">${m.toFixed(1)}</span>
+        <span style="font-size:.68rem;color:var(--text3)">(${v.n})</span>
+      </div>`;
+    }).join('');
+    if(!rows) return '';
+    return `<div style="margin-bottom:14px"><div style="font-size:.78rem;font-weight:600;margin-bottom:6px;color:var(--text)">${c.nome_barn}</div>${rows}</div>`;
+  }).filter(Boolean).join('');
+
+  /* ---------- 5. CORRELAZIONE ORARIO → PERFORMANCE ---------- */
+  const orarioMap={'mattina':{tot:0,n:0},'pomeriggio':{tot:0,n:0},'sera':{tot:0,n:0}};
+  sess.forEach(s=>{
+    if(!s.ora_inizio||!s.qualita) return;
+    const h=parseInt(s.ora_inizio.split(':')[0]);
+    const slot=h<12?'mattina':h<17?'pomeriggio':'sera';
+    orarioMap[slot].tot+=s.qualita; orarioMap[slot].n++;
+  });
+  const orarioH=Object.entries(orarioMap).filter(([,v])=>v.n>0).map(([k,v])=>{
+    const m=v.tot/v.n;
+    return `<div style="display:flex;align-items:center;gap:10px;margin-bottom:6px">
+      <span style="font-size:.8rem;color:var(--text2);min-width:70px;text-transform:capitalize">${k}</span>
+      <div style="flex:1;height:5px;background:var(--bg3);border-radius:3px;overflow:hidden">
+        <div style="height:100%;width:${Math.round(m/5*100)}%;background:var(--rust);border-radius:3px"></div>
+      </div>
+      <span style="font-size:.8rem;color:var(--text2);min-width:32px">${m.toFixed(1)}/5</span>
+      <span style="font-size:.7rem;color:var(--text3)">${v.n} sess.</span>
+    </div>`;
+  }).join('');
+
+  /* ---------- 6. USURA BOVINI → QUALITA ---------- */
+  const bovUsoH=bovs.filter(b=>b.data_ingresso).map(b=>{
+    const bs=sess.filter(s=>s.bovino===b.id&&s.qualita).sort((a,b)=>new Date(a.data)-new Date(b.data));
+    if(bs.length<2) return '';
+    const punti=bs.map(s=>({gg:Math.floor((new Date(s.data)-new Date(b.data_ingresso))/864e5),q:s.qualita}));
+    const prima=punti.filter(p=>p.gg<=30),dopo=punti.filter(p=>p.gg>30);
+    if(!prima.length||!dopo.length) return '';
+    const mP=prima.reduce((s,x)=>s+x.q,0)/prima.length;
+    const mD=dopo.reduce((s,x)=>s+x.q,0)/dopo.length;
+    const diff=mD-mP;
+    return `<div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid var(--border)">
+      <span style="font-size:.85rem">${b.nome}</span>
+      <div style="text-align:right;font-size:.78rem">
+        <span style="color:var(--text2)">Primi 30gg: <strong style="color:var(--amber)">${mP.toFixed(1)}</strong></span>
+        <span style="color:var(--text2);margin-left:10px">Dopo: <strong style="color:${diff<-0.3?'var(--red-l)':'var(--green-l)'}">${mD.toFixed(1)}</strong></span>
+        <span style="color:${diff<-0.3?'var(--red-l)':'var(--green-l)'};margin-left:6px">${diff<-0.3?'↓ Calo qualità':'→ Stabile'}</span>
+      </div>
+    </div>`;
+  }).filter(Boolean).join('');
+
+  /* ---------- 7. INDICE GARA ---------- */
+  const garaIdxH=gare.flatMap(g=>(g.run||[]).map(r=>{
+    const c=cavs.find(x=>x.id===r.cavallo_id);if(!c) return null;
+    const tot=Number(r.go1||0)+Number(r.go2||0);if(tot===0) return null;
+    const gd=new Date(g.data_inizio);
+    const preDate=new Date(gd.getTime()-30*864e5);
+    const preSess=sess.filter(s=>s.cavallo_id===r.cavallo_id&&s.qualita&&new Date(s.data)>=preDate&&new Date(s.data)<gd);
+    if(!preSess.length) return null;
+    const mediaAllen=preSess.reduce((s,x)=>s+x.qualita,0)/preSess.length;
+    const puntNorm=(tot-120)/40*5; // normalizza 120-160 → 0-5
+    const delta=puntNorm-mediaAllen;
+    const col=delta>0.5?'var(--green-l)':delta<-0.5?'var(--red-l)':'var(--yellow-l)';
+    const lbl=delta>0.5?'Migliora in gara':delta<-0.5?'Cala in gara':'In linea';
+    return `<div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid var(--border)">
+      <div><span style="font-weight:600;font-size:.85rem">${c.nome_barn}</span><div style="font-size:.72rem;color:var(--text3)">${g.nome}</div></div>
+      <div style="text-align:right">
+        <div style="font-size:.78rem;color:var(--text2)">Allen.: ${mediaAllen.toFixed(1)}/5 → Gara: ${tot.toFixed(1)}</div>
+        <div style="font-size:.75rem;color:${col};font-weight:600">${lbl}</div>
+      </div>
+    </div>`;
+  })).filter(Boolean).join('');
+
+  /* ---------- 8. TIPI LAVORO + TRAINER ---------- */
+  const tc={};sess.forEach(s=>(s.tipi_lavoro||[]).forEach(t=>tc[t]=(tc[t]||0)+1));
+  const totT=Object.values(tc).reduce((s,v)=>s+v,0)||1;
+  const tipiH=Object.entries(tc).sort((a,b)=>b[1]-a[1]).map(([t,n])=>`
+    <div style="margin-bottom:10px">
+      <div style="display:flex;justify-content:space-between;font-size:.82rem;margin-bottom:3px"><span>${tlvl(t)}</span><span style="color:var(--text2)">${n} (${Math.round(n/totT*100)}%)</span></div>
+      <div class="pbg"><div class="pfl" style="width:${Math.round(n/totT*100)}%"></div></div>
+    </div>`).join('');
+  const ts={};sess.forEach(s=>{if(s.trainer&&s.qualita){if(!ts[s.trainer])ts[s.trainer]={t:0,n:0};ts[s.trainer].t+=s.qualita;ts[s.trainer].n++;}});
+  const trainH=Object.entries(ts).sort((a,b)=>(b[1].t/b[1].n)-(a[1].t/a[1].n)).map(([t,v])=>`
+    <div class="drow"><span class="dlbl">${t}</span>
+      <span class="dval" style="color:var(--amber)">${stars(Math.round(v.t/v.n))} <span style="color:var(--text2);font-size:.78rem">(${(v.t/v.n).toFixed(1)} · ${v.n} sess.)</span></span>
+    </div>`).join('');
+
+  /* ---------- RENDER ---------- */
+  function blk(ico,titolo,contenuto){
+    if(!contenuto) return '';
+    return `<div class="card" style="margin-bottom:16px"><div class="sub-head" style="margin-bottom:12px">${ico} ${titolo}</div>${contenuto}</div>`;
+  }
+
+  document.getElementById('dash-content').innerHTML=`
+    <div class="kgrid">
+      <div class="kcard"><div class="kval">${attivi}</div><div class="klbl">Cavalli attivi</div></div>
+      <div class="kcard"><div class="kval">${sessM}</div><div class="klbl">Sessioni questo mese</div></div>
+      <div class="kcard"><div class="kval">${sess.length}</div><div class="klbl">Sessioni totali</div></div>
+      <div class="kcard"><div class="kval" style="font-size:${eT>9999?'1.2rem':'2rem'}">${fc(eT)}</div><div class="klbl">Lifetime earnings</div></div>
+    </div>
+    ${bovAl>0?`<div class="alert ay" style="margin-bottom:16px">⚠️ ${bovAl} bovini da sostituire o quasi esauriti</div>`:''}
+    ${blk('📈','Indice di progressione cavalli',progH)}
+    ${blk('💧','Indice di freschezza cavalli',freschH)}
+    ${blk('🏆','Indice Gara — allenamento vs risultato',garaIdxH)}
+    ${blk('🤝','Affinità Trainer — Cavallo (min. 2 sessioni)',affH)}
+    ${blk('⏰','Correlazione orario → qualità sessione',orarioH)}
+    ${blk('📅','Correlazione giorni di riposo → qualità',riposoH)}
+    ${blk('⚖️','Distribuzione tipi di lavoro',tipiH)}
+    ${blk('👤','Performance trainer',trainH)}
+    ${blk('🐄','Impatto usura bovini sulla qualità',bovUsoH)}
+    ${!sess.length?`<div class="empty"><div class="eico">📊</div><div class="etxt">Registra sessioni per vedere le statistiche</div></div>`:''}
+    <div id="insights-content"></div>
+  `;
+  if(sess.length>=3) renderInsights();
+}
+
+/* ===== INSIGHTS ===== */
+function renderInsights() {
+  const cavs=DB.g('cavalli'), sess=DB.g('sessioni'), gare=DB.g('gare'), bovs=DB.g('bovini');
+  const ora=new Date();
+  const meseC=ora.getMonth(), annoC=ora.getFullYear();
+  const insights=[];
+
+  /* ---- helper ---- */
+  function mediaQ(arr){ return arr.length?arr.reduce((s,x)=>s+(x.qualita||0),0)/arr.length:null; }
+  function nomeMese(m,y){ return new Date(y,m,1).toLocaleDateString('it-IT',{month:'long',year:'numeric'}); }
+  function ultimeSess(cavId,n){ return sess.filter(s=>s.cavallo_id===cavId&&s.qualita).sort((a,b)=>new Date(b.data)-new Date(a.data)).slice(0,n); }
+
+  /* ===== ANALISI PER SESSIONE (ultima sessione di ogni cavallo attivo) ===== */
+  const sessioniBlock=[];
+  cavs.filter(c=>c.stato==='attivo'||c.stato==='gara').forEach(c=>{
+    const cs=sess.filter(s=>s.cavallo_id===c.id&&s.qualita).sort((a,b)=>new Date(b.data)-new Date(a.data));
+    if(!cs.length) return;
+    const ult=cs[0];
+    const storico=cs.slice(1);
+    const mediaStorica=mediaQ(storico);
+    const lines=[];
+
+    // confronto con media storica
+    if(mediaStorica!==null){
+      const diff=ult.qualita-mediaStorica;
+      if(diff>=1) lines.push(`La sessione del ${fd(ult.data)} è stata <strong>nettamente superiore alla media</strong> (${ult.qualita}/5 vs media ${mediaStorica.toFixed(1)}/5). Momento di forma eccellente: è il caso di consolidare il lavoro appena fatto.`);
+      else if(diff>=0.3) lines.push(`La sessione del ${fd(ult.data)} è <strong>sopra la media</strong> del cavallo (${ult.qualita}/5 vs ${mediaStorica.toFixed(1)}/5). Tendenza positiva da mantenere.`);
+      else if(diff<=-1) lines.push(`La sessione del ${fd(ult.data)} è stata <strong>significativamente sotto la media</strong> (${ult.qualita}/5 vs ${mediaStorica.toFixed(1)}/5). Vale la pena indagare la causa prima della prossima uscita.`);
+      else if(diff<=-0.3) lines.push(`La sessione del ${fd(ult.data)} è <strong>leggermente sotto la media</strong> (${ult.qualita}/5 vs ${mediaStorica.toFixed(1)}/5). Monitorare nelle prossime sessioni.`);
+      else lines.push(`La sessione del ${fd(ult.data)} è <strong>in linea con la media storica</strong> (${ult.qualita}/5 vs ${mediaStorica.toFixed(1)}/5). Prestazione regolare e costante.`);
+    }
+
+    // umore vs qualità
+    if(ult.umore&&ult.qualita){
+      const umoreMap={'Ottimo':5,'Buono':4,'Distratto':2,'Difficile':1};
+      const uv=umoreMap[ult.umore];
+      if(uv&&uv<=2&&ult.qualita>=4) lines.push(`Nonostante un umore <strong>${ult.umore.toLowerCase()}</strong>, il cavallo ha ottenuto una qualità alta (${ult.qualita}/5): segno di solidità mentale e buona risposta all'addestramento.`);
+      else if(uv&&uv>=4&&ult.qualita<=2) lines.push(`Con umore <strong>${ult.umore.toLowerCase()}</strong> ma qualità bassa (${ult.qualita}/5): possibile problema fisico o di concentrazione da indagare.`);
+    }
+
+    // condizione fisica
+    if(ult.condizione==='Sotto tono'){
+      const consecutive=cs.slice(0,3).filter(s=>s.condizione==='Sotto tono').length;
+      if(consecutive>=3) lines.push(`⚠️ Il cavallo è risultato <strong>sotto tono fisicamente per 3 sessioni consecutive</strong>. Si raccomanda una valutazione veterinaria o un periodo di riposo strutturato.`);
+      else lines.push(`Condizione fisica <strong>sotto tono</strong> nell'ultima sessione. Monitorare nelle prossime uscite.`);
+    }
+
+    // bovino usato e usura
+    if(ult.bovino){
+      const bov=bovs.find(b=>b.id===ult.bovino);
+      if(bov&&bov.data_ingresso){
+        const gg=days(bov.data_ingresso);
+        if(gg>=60) lines.push(`Il bovino <strong>${bov.nome}</strong> usato in questa sessione ha <strong>${gg} giorni</strong> in ranch: è oltre la soglia di usura ottimale. Considera di sostituirlo per non compromettere la qualità dell'allenamento.`);
+        else if(gg>=45) lines.push(`Il bovino <strong>${bov.nome}</strong> ha ${gg} giorni in ranch: si avvicina alla soglia di usura. Tienilo in considerazione nelle prossime settimane.`);
+      }
+    }
+
+    // giorni di riposo dall'ultima sessione precedente
+    if(storico.length){
+      const gap=Math.floor((new Date(ult.data)-new Date(storico[0].data))/864e5);
+      if(gap===0||gap===1){
+        if(ult.qualita<storico[0].qualita) lines.push(`Sessioni ravvicinate (${gap===0?'stesso giorno':'1 giorno di distanza'}): la qualità è calata da ${storico[0].qualita} a ${ult.qualita}/5. Potrebbe giovare un giorno extra di riposo tra le uscite.`);
+      } else if(gap>14){
+        lines.push(`Dopo <strong>${gap} giorni di pausa</strong>, il cavallo ha ottenuto ${ult.qualita}/5. ${ult.qualita>=4?'La risposta è stata buona nonostante la lunga sosta.':'La lunga pausa potrebbe aver influito negativamente sulla prestazione.'}`);
+      }
+    }
+
+    // trainer
+    if(ult.trainer&&storico.length>=2){
+      const sessTrainer=storico.filter(s=>s.trainer===ult.trainer&&s.qualita);
+      const altriTrainer=storico.filter(s=>s.trainer&&s.trainer!==ult.trainer&&s.qualita);
+      if(sessTrainer.length>=2&&altriTrainer.length>=2){
+        const mT=mediaQ(sessTrainer), mA=mediaQ(altriTrainer);
+        if(mT-mA>=0.5) lines.push(`Con il trainer <strong>${ult.trainer}</strong> questo cavallo ottiene in media <strong>${mT.toFixed(1)}/5</strong>, significativamente meglio rispetto agli altri trainer (${mA.toFixed(1)}/5). Affinità molto buona.`);
+        else if(mA-mT>=0.5) lines.push(`Con il trainer <strong>${ult.trainer}</strong> la media è <strong>${mT.toFixed(1)}/5</strong>, inferiore ad altri trainer (${mA.toFixed(1)}/5). Potrebbe valere una riflessione sulla coppia cavallo-trainer.`);
+      }
+    }
+
+    if(!lines.length) return;
+    sessioniBlock.push(`
+      <div style="margin-bottom:18px;padding-bottom:18px;border-bottom:1px solid var(--border)">
+        <div style="font-family:'Playfair Display',serif;font-size:1rem;color:var(--amber);margin-bottom:8px">🐴 ${c.nome_barn}</div>
+        ${lines.map(l=>`<div style="font-size:.85rem;color:var(--text2);line-height:1.65;margin-bottom:6px">→ ${l}</div>`).join('')}
+      </div>`);
+  });
+
+  /* ===== REPORT MENSILE PER CAVALLO ===== */
+  const meseBlock=[];
+  cavs.filter(c=>c.stato==='attivo'||c.stato==='gara').forEach(c=>{
+    const sessM=sess.filter(s=>s.cavallo_id===c.id&&s.qualita&&new Date(s.data).getMonth()===meseC&&new Date(s.data).getFullYear()===annoC);
+    if(sessM.length<2) return;
+    const lines=[];
+    const mediaM=mediaQ(sessM);
+
+    // volume e media
+    lines.push(`Nel mese di <strong>${nomeMese(meseC,annoC)}</strong>, ${c.nome_barn} ha completato <strong>${sessM.length} sessioni</strong> con una qualità media di <strong>${mediaM.toFixed(1)}/5</strong>.`);
+
+    // trend intra-mese (prima metà vs seconda metà)
+    const sortM=sessM.sort((a,b)=>new Date(a.data)-new Date(b.data));
+    const mid=Math.floor(sortM.length/2);
+    const p1=mediaQ(sortM.slice(0,mid)), p2=mediaQ(sortM.slice(mid));
+    if(p1&&p2){
+      const diff=p2-p1;
+      if(diff>=0.5) lines.push(`Il trend mensile è <strong>in crescita</strong>: la seconda parte del mese (media ${p2.toFixed(1)}/5) ha superato la prima (${p1.toFixed(1)}/5). Il cavallo sta migliorando con continuità.`);
+      else if(diff<=-0.5) lines.push(`Il trend mensile è <strong>in calo</strong>: la seconda parte del mese (media ${p2.toFixed(1)}/5) è sotto la prima (${p1.toFixed(1)}/5). Potrebbe esserci affaticamento o un problema da indagare.`);
+      else lines.push(`Il rendimento è stato <strong>costante</strong> nel corso del mese (prima metà: ${p1.toFixed(1)}/5, seconda metà: ${p2.toFixed(1)}/5).`);
+    }
+
+    // tipi di lavoro del mese
+    const tipiM={};sessM.forEach(s=>(s.tipi_lavoro||[]).forEach(t=>tipiM[t]=(tipiM[t]||0)+1));
+    const tipiSort=Object.entries(tipiM).sort((a,b)=>b[1]-a[1]);
+    if(tipiSort.length){
+      const dominante=tipiSort[0];
+      const mancanti=['cow','herd','fence','dry','flag'].filter(t=>!tipiM[t]);
+      lines.push(`Il lavoro dominante del mese è stato <strong>${tlvl(dominante[0])}</strong> (${dominante[1]} sessioni su ${sessM.length}).${mancanti.length?` Tipi di lavoro non eseguiti questo mese: ${mancanti.map(t=>tlvl(t)).join(', ')}.`:' Buona varietà di lavoro coperta.'}`);
+    }
+
+    // condizione fisica del mese
+    const condM={};sessM.forEach(s=>{if(s.condizione)condM[s.condizione]=(condM[s.condizione]||0)+1;});
+    const condDom=Object.entries(condM).sort((a,b)=>b[1]-a[1])[0];
+    if(condDom){
+      if(condDom[0]==='Sotto tono'&&condDom[1]>=2) lines.push(`⚠️ La condizione fisica prevalente del mese è stata <strong>sotto tono</strong> (${condDom[1]} sessioni). Considerare una visita veterinaria o un piano di recupero.`);
+      else if(condDom[0]==='Ottima') lines.push(`La condizione fisica è stata prevalentemente <strong>ottima</strong> (${condDom[1]} sessioni): il cavallo è in ottima forma fisica.`);
+    }
+
+    // umore del mese
+    const umoreM={};sessM.forEach(s=>{if(s.umore)umoreM[s.umore]=(umoreM[s.umore]||0)+1;});
+    const umoreDom=Object.entries(umoreM).sort((a,b)=>b[1]-a[1])[0];
+    if(umoreDom){
+      if(umoreDom[0]==='Difficile'||umoreDom[0]==='Distratto') lines.push(`L'umore prevalente è stato <strong>${umoreDom[0].toLowerCase()}</strong> (${umoreDom[1]} sessioni). Un cavallo spesso distratto o difficile può beneficiare di variazioni nel programma di lavoro o di una revisione del metodo di addestramento.`);
+    }
+
+    // trainer del mese
+    const trainerM={};sessM.forEach(s=>{if(s.trainer&&s.qualita){if(!trainerM[s.trainer])trainerM[s.trainer]={t:0,n:0};trainerM[s.trainer].t+=s.qualita;trainerM[s.trainer].n++;}});
+    const trainerSort=Object.entries(trainerM).sort((a,b)=>(b[1].t/b[1].n)-(a[1].t/a[1].n));
+    if(trainerSort.length>=2){
+      const [t1,v1]=trainerSort[0],[t2,v2]=trainerSort[1];
+      const m1=v1.t/v1.n,m2=v2.t/v2.n;
+      if(m1-m2>=0.5) lines.push(`Il trainer più efficace questo mese con ${c.nome_barn} è stato <strong>${t1}</strong> (media ${m1.toFixed(1)}/5), sensibilmente meglio di ${t2} (${m2.toFixed(1)}/5).`);
+    } else if(trainerSort.length===1){
+      lines.push(`Questo mese ha lavorato con un solo trainer: <strong>${trainerSort[0][0]}</strong>.`);
+    }
+
+    // bovini usati e impatto
+    const boviniM={};sessM.forEach(s=>{if(s.bovino)boviniM[s.bovino]=(boviniM[s.bovino]||0)+1;});
+    const bovUsati=Object.keys(boviniM).map(id=>{
+      const b=bovs.find(x=>x.id===id);
+      if(!b) return null;
+      const gg=b.data_ingresso?days(b.data_ingresso):null;
+      return b?`${b.nome}${gg!==null?' ('+gg+'gg)':''}`:null;
+    }).filter(Boolean);
+    if(bovUsati.length) lines.push(`Bovini utilizzati nel mese: <strong>${bovUsati.join(', ')}</strong>. ${Object.keys(boviniM).some(id=>{const b=bovs.find(x=>x.id===id);return b&&b.data_ingresso&&days(b.data_ingresso)>=50;})?'⚠️ Almeno uno dei bovini usati ha superato i 50 giorni in ranch: potrebbe aver influenzato negativamente alcune sessioni.':''}`);
+
+    // confronto con mese precedente
+    const mesePrecM=(meseC-1+12)%12, mesePrecA=meseC===0?annoC-1:annoC;
+    const sessPrec=sess.filter(s=>s.cavallo_id===c.id&&s.qualita&&new Date(s.data).getMonth()===mesePrecM&&new Date(s.data).getFullYear()===mesePrecA);
+    if(sessPrec.length>=2){
+      const mediaPrec=mediaQ(sessPrec);
+      const diffMese=mediaM-mediaPrec;
+      if(diffMese>=0.3) lines.push(`Rispetto al mese precedente (${nomeMese(mesePrecM,mesePrecA)}, media ${mediaPrec.toFixed(1)}/5) la performance è <strong>migliorata di ${diffMese.toFixed(1)} punti</strong>. Ottimo segnale di crescita.`);
+      else if(diffMese<=-0.3) lines.push(`Rispetto al mese precedente (${nomeMese(mesePrecM,mesePrecA)}, media ${mediaPrec.toFixed(1)}/5) la performance è <strong>calata di ${Math.abs(diffMese).toFixed(1)} punti</strong>. Vale la pena capire se si tratta di un momento di flessione normale o di un segnale da non ignorare.`);
+      else lines.push(`La performance di questo mese (${mediaM.toFixed(1)}/5) è sostanzialmente <strong>in linea con il mese precedente</strong> (${mediaPrec.toFixed(1)}/5). Rendimento stabile.`);
+    }
+
+    // gare del mese
+    const gareMese=gare.filter(g=>{const d=new Date(g.data_inizio);return d.getMonth()===meseC&&d.getFullYear()===annoC;});
+    const runMese=gareMese.flatMap(g=>(g.run||[]).filter(r=>r.cavallo_id===c.id));
+    if(runMese.length){
+      const punti=runMese.filter(r=>r.go1&&r.go2).map(r=>Number(r.go1)+Number(r.go2));
+      if(punti.length) lines.push(`Ha partecipato a <strong>${runMese.length} run in gara</strong> questo mese. Punteggio medio in gara: <strong>${(punti.reduce((s,v)=>s+v,0)/punti.length).toFixed(1)}</strong>.`);
+    }
+
+    // raccomandazione finale
+    const rec=[];
+    if(mediaM<3) rec.push('Valutare una revisione del programma di allenamento');
+    if(Object.keys(tipiM).length<=2) rec.push('Introdurre maggiore varietà nei tipi di lavoro');
+    if(sessM.length<4) rec.push('Aumentare la frequenza delle sessioni mensili');
+    if(Object.keys(boviniM).some(id=>{const b=bovs.find(x=>x.id===id);return b&&b.data_ingresso&&days(b.data_ingresso)>=55;})) rec.push('Sostituire i bovini più usurati');
+    if(rec.length) lines.push(`<strong>Raccomandazioni per il prossimo mese:</strong> ${rec.join(' · ')}.`);
+
+    meseBlock.push(`
+      <div style="margin-bottom:22px;padding-bottom:22px;border-bottom:1px solid var(--border)">
+        <div style="font-family:'Playfair Display',serif;font-size:1rem;color:var(--amber);margin-bottom:10px">🐴 ${c.nome_barn} — ${nomeMese(meseC,annoC)}</div>
+        ${lines.map(l=>`<div style="font-size:.85rem;color:var(--text2);line-height:1.7;margin-bottom:8px">→ ${l}</div>`).join('')}
+      </div>`);
+  });
+
+  /* ===== RENDER FINALE ===== */
+  const el=document.getElementById('insights-content');
+  if(!el) return;
+  let html='';
+
+  if(sessioniBlock.length){
+    html+=`<div class="card" style="margin-bottom:16px">
+      <div class="sub-head" style="margin-bottom:16px">🔍 ANALISI ULTIME SESSIONI — PER CAVALLO</div>
+      ${sessioniBlock.join('')}
+    </div>`;
+  }
+
+  if(meseBlock.length){
+    html+=`<div class="card" style="margin-bottom:16px">
+      <div class="sub-head" style="margin-bottom:16px">📋 REPORT MENSILE DETTAGLIATO — ${nomeMese(meseC,annoC).toUpperCase()}</div>
+      ${meseBlock.join('')}
+    </div>`;
+  }
+
+  if(!html) html=`<div style="color:var(--text3);font-size:.85rem;padding:10px 0">Registra almeno 2 sessioni nel mese corrente per il report mensile.</div>`;
+  el.innerHTML=html;
+}
+
+/* ===== PASSWORD ===== */
+function doPw(){
+  const v=document.getElementById('pw-in').value.trim().toLowerCase();
+  if(v==='cutthecat'){
+    localStorage.setItem('rcm_auth','1');
+    document.getElementById('cover').style.display='none';
+    document.getElementById('app-shell').style.display='flex';
+  } else {
+    document.getElementById('pw-err').textContent='Password errata. Riprova.';
+    document.getElementById('pw-in').value='';
+    setTimeout(()=>{const e=document.getElementById('pw-err');if(e)e.textContent='';},2500);
+  }
+}
+
+/* ===== EXPORT / IMPORT ===== */
+function exportData(){
+  const d={cavalli:DB.g('cavalli'),sessioni:DB.g('sessioni'),gare:DB.g('gare'),bovini:DB.g('bovini'),
+    salute:DB.g('salute'),eventi:DB.g('eventi'),trainers:DB.g('trainers'),exported:new Date().toISOString()};
+  const blob=new Blob([JSON.stringify(d,null,2)],{type:'application/json'});
+  const url=URL.createObjectURL(blob),a=document.createElement('a');
+  a.href=url;a.download=`ranch_cutting_backup_${new Date().toISOString().split('T')[0]}.json`;a.click();URL.revokeObjectURL(url);
+}
+function importTrigger(){document.getElementById('import-file').click();}
+function importData(input){
+  const file=input.files[0];if(!file)return;
+  const reader=new FileReader();
+  reader.onload=e=>{
+    try{
+      const d=JSON.parse(e.target.result);
+      if(!confirm('Importare il backup? I dati attuali verranno sostituiti.'))return;
+      ['cavalli','sessioni','gare','bovini','salute','eventi','trainers'].forEach(k=>{if(d[k])DB.s(k,d[k]);});
+      alert('Backup importato con successo!');location.reload();
+    }catch(err){alert('Errore: file non valido.');}
+  };
+  reader.readAsText(file);
+  input.value='';
+}
+
+/* ===== INIT ===== */
+document.addEventListener('DOMContentLoaded',()=>{
+  ['cavalli','sessioni','gare','bovini','salute','eventi','trainers'].forEach(k=>{
+    if(!localStorage.getItem('rcm_'+k))DB.s(k,[]);
+  });
+  if(localStorage.getItem('rcm_auth')==='1'){
+    document.getElementById('cover').style.display='none';
+    document.getElementById('app-shell').style.display='flex';
+    setTimeout(()=>goPanel('guida', document.querySelector('.snav-item')), 0);
+  }
+  renderCav();
+});
+</script>
+</body>
+</html>
