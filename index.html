@@ -834,6 +834,71 @@ function detCav(id) {
   const sess=DB.g('sessioni').filter(s=>s.cavallo_id===id);
   let eA=0; DB.g('gare').forEach(g=>(g.run||[]).forEach(r=>{if(r.cavallo_id===id)eA+=Number(r.prize_money||0);}));
   const eP=Number(c.earnings_pre||0),eT=eP+eA;
+
+  /* ---- RIEPILOGO SESSIONI ---- */
+  let riepSess='';
+  const sessQ=sess.filter(s=>s.qualita);
+  if(sessQ.length>=2){
+    const ora=new Date();
+    const sessM=sessQ.filter(s=>{const d=new Date(s.data);return d.getMonth()===ora.getMonth()&&d.getFullYear()===ora.getFullYear();});
+    const mediaGen=sessQ.reduce((s,x)=>s+x.qualita,0)/sessQ.length;
+    const sorted=sessQ.slice().sort((a,b)=>new Date(a.data)-new Date(b.data));
+    const mid=Math.floor(sorted.length/2);
+    const p1=sorted.slice(0,mid).reduce((s,x)=>s+x.qualita,0)/mid;
+    const p2=sorted.slice(mid).reduce((s,x)=>s+x.qualita,0)/(sorted.length-mid);
+    const diff=p2-p1, dir=diff>0.2?'↑ In crescita':diff<-0.2?'↓ In calo':'→ Stabile';
+    const dirCol=diff>0.2?'var(--green-l)':diff<-0.2?'var(--red-l)':'var(--yellow-l)';
+    const best=sessQ.reduce((a,b)=>b.qualita>a.qualita?b:a);
+    const worst=sessQ.reduce((a,b)=>b.qualita<a.qualita?b:a);
+    // trainer
+    const trMap={};sessQ.forEach(s=>{if(s.trainer){if(!trMap[s.trainer])trMap[s.trainer]={t:0,n:0};trMap[s.trainer].t+=s.qualita;trMap[s.trainer].n++;}});
+    const trSort=Object.entries(trMap).sort((a,b)=>(b[1].t/b[1].n)-(a[1].t/a[1].n));
+    const trBest=trSort.length?trSort[0]:null;
+    // tipi lavoro
+    const tipiMap={};sess.forEach(s=>(s.tipi_lavoro||[]).forEach(t=>tipiMap[t]=(tipiMap[t]||0)+1));
+    const tipiSort=Object.entries(tipiMap).sort((a,b)=>b[1]-a[1]);
+    // bovini
+    const bovMap={};sess.forEach(s=>{if(s.bovino){const b=DB.g('bovini').find(x=>x.id===s.bovino);if(b)bovMap[b.nome]=(bovMap[b.nome]||0)+1;}});
+    const bovSort=Object.entries(bovMap).sort((a,b)=>b[1]-a[1]);
+    // ultime 5 sessioni
+    const ult5=sess.filter(s=>s.data).sort((a,b)=>new Date(b.data)-new Date(a.data)).slice(0,5);
+    const cavs2=DB.g('cavalli');
+
+    riepSess=`<div class="dsec"><div class="dsth">📊 Riepilogo Sessioni</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px">
+        <div class="kcard" style="padding:12px 10px">
+          <div class="kval" style="font-size:1.5rem">${sessQ.length}</div>
+          <div class="klbl">Sessioni totali</div>
+        </div>
+        <div class="kcard" style="padding:12px 10px">
+          <div class="kval" style="font-size:1.5rem">${sessM.length}</div>
+          <div class="klbl">Questo mese</div>
+        </div>
+        <div class="kcard" style="padding:12px 10px">
+          <div class="kval" style="font-size:1.5rem">${mediaGen.toFixed(1)}</div>
+          <div class="klbl">Media qualità /5</div>
+        </div>
+        <div class="kcard" style="padding:12px 10px">
+          <div class="kval" style="font-size:1.1rem;color:${dirCol}">${dir}</div>
+          <div class="klbl">Trend generale</div>
+        </div>
+      </div>
+      ${dr('Sessione migliore','<span style="color:var(--green-l)">'+stars(best.qualita)+'</span> — '+fd(best.data)+(best.trainer?' ('+best.trainer+')':''))}
+      ${dr('Sessione peggiore','<span style="color:var(--red-l)">'+stars(worst.qualita)+'</span> — '+fd(worst.data)+(worst.trainer?' ('+worst.trainer+')':''))}
+      ${trBest?dr('Trainer più efficace','<strong>'+trBest[0]+'</strong> — media '+(trBest[1].t/trBest[1].n).toFixed(1)+'/5 ('+trBest[1].n+' sess.)'):''}
+      ${tipiSort.length?dr('Lavoro più frequente',tipiSort.map(([t,n])=>tlvl(t)+' ('+n+')').join(', ')):''}
+      ${bovSort.length?dr('Bovini usati',bovSort.map(([n,c])=>n+' ×'+c).join(', ')):''}
+      ${ult5.length?`<div class="dsth" style="margin-top:14px">Ultime sessioni</div>
+        ${ult5.map(s=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--border);font-size:.82rem">
+          <div>
+            <span style="color:var(--text)">${fd(s.data)}</span>
+            ${s.trainer?`<span style="color:var(--text3);margin-left:6px">${s.trainer}</span>`:''}
+            ${(s.tipi_lavoro||[]).length?`<span style="color:var(--text3);margin-left:6px">${s.tipi_lavoro.map(t=>tlvl(t)).join(', ')}</span>`:''}
+          </div>
+          <span style="color:var(--amber);letter-spacing:1px">${stars(s.qualita||0)}</span>
+        </div>`).join('')}`:''}
+    </div>`;
+  }
   // Layout: due colonne su desktop (dati sinistra, foto destra stile Oxbow)
   const fotoCol=c.foto?`
     <div style="flex-shrink:0;width:260px;align-self:flex-start;position:sticky;top:20px">
@@ -870,9 +935,10 @@ function detCav(id) {
           <div class="erow etot"><span class="elbl">Lifetime Earnings</span><span class="eval">${fc(eT)}</span></div>
         </div>
         ${c.note?`<div class="dsec"><div class="dsth">Note</div><div style="font-size:.87rem;color:var(--text2);line-height:1.55">${c.note}</div></div>`:''}
+        ${riepSess}
         <div class="act-row">
           <button class="btn bo bsm" onclick="formCav('${c.id}')">✏️ Modifica</button>
-          <button class="btn bo bsm" onclick="showDiarioCav('${c.id}')">📋 Diario</button>
+          <button class="btn bo bsm" onclick="showDiarioCav('${c.id}')">📋 Diario completo</button>
           <button class="btn bd bsm" onclick="delCav('${c.id}')">🗑️ Elimina</button>
         </div>
       </div>
